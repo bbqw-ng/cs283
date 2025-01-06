@@ -20,7 +20,7 @@ Please provide answers to these questions using markdown notation and place them
     - https://github.com/bbqw-ng/cs283
 
 4. Briefly describe what you want to get out of this class.
-    - I want to get a better understanding of systems programming and learning about different parts that make up a program, what they do, and how they work (together or separately).
+    - I want to get a better understanding of systems programming and learning about different parts that make up a system, what they do, and how they work (together or separately).
 
 5. Briefly describe any concerns you might be having with being successful in this class (if any).
     - No concerns.
