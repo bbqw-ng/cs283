@@ -49,13 +49,15 @@ int main(int argc, char *argv[]){
     int  user_str_len;      //length of user supplied string
 
     //TODO:  #1. WHY IS THIS SAFE, aka what if arv[1] does not exist?
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      When argv[1] does not exist, OR when the argument count is less than 2, it provides the user with a template and then terminates the program. 
+    //      This is safe because again, it terminates the program if argv[1] doesn't exist.
     if ((argc < 2) || (*argv[1] != '-')){
         usage(argv[0]);
         exit(1);
     }
 
     opt = (char)*(argv[1]+1);   //get the option flag
+    printf("%c\n", opt);
 
     //handle the help flag and then exit normally
     if (opt == 'h'){
@@ -66,19 +68,27 @@ int main(int argc, char *argv[]){
     //WE NOW WILL HANDLE THE REQUIRED OPERATIONS
 
     //TODO:  #2 Document the purpose of the if statement below
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      The purpose of the if statement below is to check if the arguments provided are less than 3. 
+    //      This is because we want the program name, the choice, and the string. 
+    //      Without those 3 arguments our program will not work as expected so we have to error handle that if it ever occurred hence the if statement checking for the 3 arguments.
     if (argc < 3){
         usage(argv[0]);
         exit(1);
     }
 
     input_string = argv[2]; //capture the user input string
+    printf("%s\n", input_string);
 
     //TODO:  #3 Allocate space for the buffer using malloc and
     //          handle error if malloc fails by exiting with a 
     //          return code of 99
-    // CODE GOES HERE FOR #3
-
+    
+    //allocate mem from heap return pointer to buff
+    // we can also do sizeof(char) * 50, but a char is always 1 byte so it doesn't matter
+    buff = (char*)malloc(BUFFER_SZ);
+    //if buff is null, memory allocation failed, terminates prog with code 99.
+    if (buff == NULL)
+      exit(99);
 
     user_str_len = setup_buff(buff, input_string, BUFFER_SZ);     //see todos
     if (user_str_len < 0){
@@ -95,9 +105,14 @@ int main(int argc, char *argv[]){
             }
             printf("Word Count: %d\n", rc);
             break;
-
         //TODO:  #5 Implement the other cases for 'r' and 'w' by extending
         //       the case statement options
+        case 'r':
+            //reverses character in place in the sample string.
+            break;
+        case 'w':
+            //prints individual words and their length in the sample string
+            break;
         default:
             usage(argv[0]);
             exit(1);
@@ -114,4 +129,7 @@ int main(int argc, char *argv[]){
 //          is a good practice, after all we know from main() that 
 //          the buff variable will have exactly 50 bytes?
 //  
+//
+//          Knowing the length of the buffer will not always be the case, and in the case that we don't it is best practice
+//          to provide the pointer and the buffer size to avoid any problems with memory and things like segfaults.
 //          PLACE YOUR ANSWER HERE
