@@ -129,7 +129,6 @@ int main(int argc, char *argv[]){
 //          is a good practice, after all we know from main() that 
 //          the buff variable will have exactly 50 bytes?
 //  
-//
 //          Knowing the length of the buffer will not always be the case, and in the case that we don't it is best practice
 //          to provide the pointer and the buffer size to avoid any problems with memory and things like segfaults.
 //          PLACE YOUR ANSWER HERE
