@@ -13,7 +13,7 @@ int  setup_buff(char *, char *, int);
 //prototypes for functions to handle required functionality
 int count_words(char *, int, int);
 //add additional prototypes here
-
+int reverse_words(char *, int);
 
 int setup_buff(char *buff, char *user_str, int len){
     //TODO: #4:  Implement the setup buff as per the directions
@@ -80,6 +80,11 @@ int count_words(char *buff, int len, int str_len){
 }
 
 //ADD OTHER HELPER FUNCTIONS HERE FOR OTHER REQUIRED PROGRAM OPTIONS
+
+int reverse_words(char* buff, int bufflen) {
+  
+  return 0;
+}
 
 int main(int argc, char *argv[]){
 
@@ -148,6 +153,11 @@ int main(int argc, char *argv[]){
         //       the case statement options
         case 'r':
             //reverses character in place in the sample string.
+            //if length of buff is greater than 1, we reverse else nothing to change since it is palindrome at 1 char.
+            if (user_str_len >= 1) {
+              reverse_words(buff, user_str_len);
+            }
+            printf("Reversed Successfully\n.");
             break;
         case 'w':
             //prints individual words and their length in the sample string
