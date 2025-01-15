@@ -13,7 +13,39 @@ int  setup_buff(char *, char *, int);
 //prototypes for functions to handle required functionality
 int count_words(char *, int, int);
 //add additional prototypes here
-int reverse_words(char *, int);
+int reverse(char *, int, int);
+int word_print(char *, int, int);
+
+int word_print(char *buff, int buffMaxLength, int actualBufferLength) {
+  if (actualBufferLength <= 0) {
+    printf("No words found.");
+    return -1;
+  } else {
+  //word_start 0 = not started, 1 = started.
+    printf("Word Print\n");
+    printf("----------");
+    int word_start = 0;
+    int word_length = 0;
+    //aux array for chars
+    char *word;
+
+    for (int i = 0; i < actualBufferLength; i++) {
+      if (*(buff+i) != ' ' && word_start == 0) {
+        word_start = 1;
+        *(word+word_length) = *(buff+i);
+      } else if (*(buff+i) != ' ' && word_start == 1) {
+        word_length++;
+        *(word+word_length) = *(buff+i);
+      } else {
+        printf("%s (%d)\n", word, word_length);
+        word_start = 0;
+        word_length = 0;
+        word = NULL;
+      }
+    }
+  }
+  return 0;
+}
 
 int setup_buff(char *buff, char *user_str, int len){
     //TODO: #4:  Implement the setup buff as per the directions
@@ -45,7 +77,6 @@ int setup_buff(char *buff, char *user_str, int len){
       } else {
         //if it is space or tab, add space to buffer if current realized length of buffer is 0. 
         if (currBuffLen == 0) {
-          *(buff+currBuffLen) = ' ';
           currBuffLen++;
         //check previous char of buffer, if it is not space, add a space.
         } else if (buff[currBuffLen-1] != ' ') {
@@ -57,12 +88,12 @@ int setup_buff(char *buff, char *user_str, int len){
     //We can then use memset to set the rest of the items in the buffer to "." using currBuffLen.
     //here we cast a char pointer since we are not dealing with ints.
     memset((char*)(buff+currBuffLen), '.', BUFFER_SZ-currBuffLen);
-    //returns the currBuffLen (BEFORE the "." were added in), effectively giving us a false null terminator or length limiter we can use.
+    //returns the currBuffLen (BEFORE the "." were added in), so it would the actual length of the user provided string without the duplicate spaces and ".".
     return currBuffLen;
 }
 
 void print_buff(char *buff, int len){
-    printf("Buffer:  ");
+    printf("Buffer:");
     for (int i=0; i<len; i++){
         putchar(*(buff+i));
     }
@@ -75,15 +106,46 @@ void usage(char *exename){
 }
 
 int count_words(char *buff, int len, int str_len){
-    //YOU MUST IMPLEMENT
-    return 0;
+  //initialize a word count var.
+  int wc = 0;
+  // a bug where it counts the last spacebar as a word. need fix.
+  for (int i = 0; i < str_len; i++) {
+    //if the string's length is 1 and it is space, no words and we break the loop.
+    if (str_len == 1 && *(buff+i-i) == ' ') {
+      break;
+      // if it is a character as the only thing in the buff, it will be counted as a word.
+    } else if (str_len == 1 && *(buff-i+i) != ' ') {
+      wc++;
+      // if curr is space and prev is not, means it is end of word, we increment word count.
+    } else if (*(buff+i) == ' ' && *(buff+i-1) != ' ') {
+      wc++;
+    } else if (*(buff+i) != ' ' && (i+1) == str_len){
+      wc++;
+    }
+  }
+  return wc;
 }
 
 //ADD OTHER HELPER FUNCTIONS HERE FOR OTHER REQUIRED PROGRAM OPTIONS
 
-int reverse_words(char* buff, int bufflen) {
-  
-  return 0;
+int reverse(char* buff, int bufferMaxLength, int actualBufferLength) {
+  //reversing a string in place, will use two pointers one at the front and one at the end.
+  for (int i = 0; i <= (actualBufferLength/2)+1; i++) {
+    //takes temp letter
+    char one = *(buff+actualBufferLength-i-1);
+    //swaps last with first
+    *(buff+actualBufferLength-i-1) = *(buff+i);
+    //swaps first with temp
+    *(buff+i) = one;
+  }
+  //removing all the placeholder "." 's as per the instructions for reverse.
+  for (int j = 0; j < bufferMaxLength; j++) {
+    //if ".", then set as null terminator.
+    if (*(buff+j) == '.') {
+      *(buff+j) = '\0';
+    }
+  }
+  return 0; 
 }
 
 int main(int argc, char *argv[]){
@@ -155,9 +217,8 @@ int main(int argc, char *argv[]){
             //reverses character in place in the sample string.
             //if length of buff is greater than 1, we reverse else nothing to change since it is palindrome at 1 char.
             if (user_str_len >= 1) {
-              reverse_words(buff, user_str_len);
+              reverse(buff, BUFFER_SZ, user_str_len);
             }
-            printf("Reversed Successfully\n.");
             break;
         case 'w':
             //prints individual words and their length in the sample string
