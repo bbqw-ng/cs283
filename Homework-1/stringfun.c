@@ -17,7 +17,48 @@ int count_words(char *, int, int);
 
 int setup_buff(char *buff, char *user_str, int len){
     //TODO: #4:  Implement the setup buff as per the directions
-    return 0; //for now just so the code compiles. 
+    
+    //checks for user_str > BUFFER_SZ
+    int userStringLength = 0;
+    for (int l = 0; *(user_str+l) != '\0'; l++) {
+      userStringLength++;
+    }
+
+    printf("%d\n", userStringLength);
+    //user provided string's length is too large for our buffer.
+    if (userStringLength > len) 
+      return -1;
+  
+    //this should be empty since we hadn't set up the buffer yet.
+    printf("%s <- If not blank, something is wrong.\n", buff);
+    printf("The User String: %s\n", user_str);
+
+    //keeps track of the current buffer length
+    int currBuffLen = 0;
+
+    //We want to first filter out any spaces. We can do this by checking the character after the current one.
+    for (int i = 0; *(user_str+i) != '\0'; i++) {
+      //if current char is not space or tab, copy over to buffer.
+      if (*(user_str+i) != ' ' && *(user_str+i) != '\t') {
+        *(buff+currBuffLen) = user_str[i];
+        currBuffLen++;
+      } else {
+        //if it is space or tab, add space to buffer if current realized length of buffer is 0. 
+        if (currBuffLen == 0) {
+          *(buff+currBuffLen) = ' ';
+          currBuffLen++;
+        //check previous char of buffer, if it is not space, add a space.
+        } else if (buff[currBuffLen-1] != ' ') {
+          *(buff+currBuffLen) = ' ';
+          currBuffLen++;
+        }
+      }
+    }
+    //We can then use memset to set the rest of the items in the buffer to "." using currBuffLen.
+    //here we cast a char pointer since we are not dealing with ints.
+    memset((char*)(buff+currBuffLen), '.', BUFFER_SZ-currBuffLen);
+    //returns the currBuffLen (BEFORE the "." were added in), effectively giving us a false null terminator or length limiter we can use.
+    return currBuffLen;
 }
 
 void print_buff(char *buff, int len){
@@ -57,7 +98,6 @@ int main(int argc, char *argv[]){
     }
 
     opt = (char)*(argv[1]+1);   //get the option flag
-    printf("%c\n", opt);
 
     //handle the help flag and then exit normally
     if (opt == 'h'){
@@ -77,7 +117,6 @@ int main(int argc, char *argv[]){
     }
 
     input_string = argv[2]; //capture the user input string
-    printf("%s\n", input_string);
 
     //TODO:  #3 Allocate space for the buffer using malloc and
     //          handle error if malloc fails by exiting with a 
@@ -120,6 +159,10 @@ int main(int argc, char *argv[]){
 
     //TODO:  #6 Dont forget to free your buffer before exiting
     print_buff(buff,BUFFER_SZ);
+    free(buff);
+    buff = NULL;
+
+    printf("Buffer freed successfully.");
     exit(0);
 }
 
