@@ -17,30 +17,35 @@ int reverse(char *, int, int);
 int word_print(char *, int, int);
 
 int word_print(char *buff, int buffMaxLength, int actualBufferLength) {
+  //buffer overflow error handling.
+  if (actualBufferLength > buffMaxLength) {
+    return -2;
+  }
+  //no words found error handling.
   if (actualBufferLength <= 0) {
     printf("No words found.");
     return -1;
   } else {
-  //word_start 0 = not started, 1 = started.
     printf("Word Print\n");
-    printf("----------");
-    int word_start = 0;
+    printf("----------\n");
+    //word length tracker and word count tracker.
+    int wc = 1;
     int word_length = 0;
-    //aux array for chars
-    char *word;
 
+    
     for (int i = 0; i < actualBufferLength; i++) {
-      if (*(buff+i) != ' ' && word_start == 0) {
-        word_start = 1;
-        *(word+word_length) = *(buff+i);
-      } else if (*(buff+i) != ' ' && word_start == 1) {
+      //if not space, word start, length increment
+      if (word_length == 0) {
+        printf("%d. ", wc++);
+      }
+      if (*(buff+i) != ' ' && *(buff+i) != '.') {
+        //prints letters of word each iteration and increases length.
+        printf("%c", *(buff+i));
         word_length++;
-        *(word+word_length) = *(buff+i);
       } else {
-        printf("%s (%d)\n", word, word_length);
-        word_start = 0;
+        //prints out length, resets length, increments word count.
+        printf(" (%d)\n", word_length);
         word_length = 0;
-        word = NULL;
       }
     }
   }
@@ -56,44 +61,45 @@ int setup_buff(char *buff, char *user_str, int len){
       userStringLength++;
     }
 
-    printf("%d\n", userStringLength);
     //user provided string's length is too large for our buffer.
     if (userStringLength > len) 
       return -1;
   
-    //this should be empty since we hadn't set up the buffer yet.
-    printf("%s <- If not blank, something is wrong.\n", buff);
-    printf("The User String: %s\n", user_str);
-
     //keeps track of the current buffer length
     int currBuffLen = 0;
-
-    //We want to first filter out any spaces. We can do this by checking the character after the current one.
-    for (int i = 0; *(user_str+i) != '\0'; i++) {
-      //if current char is not space or tab, copy over to buffer.
-      if (*(user_str+i) != ' ' && *(user_str+i) != '\t') {
-        *(buff+currBuffLen) = user_str[i];
+    //keeps track if word started.
+    int wordStarted = 0;
+    
+    while (*user_str != '\0') {
+      //if not space or tab, then add char to buff.
+      if (*user_str != ' ' && *user_str != '\t') {
+        *(buff+currBuffLen) = *user_str;
         currBuffLen++;
-      } else {
-        //if it is space or tab, add space to buffer if current realized length of buffer is 0. 
-        if (currBuffLen == 0) {
-          currBuffLen++;
-        //check previous char of buffer, if it is not space, add a space.
-        } else if (buff[currBuffLen-1] != ' ') {
+        wordStarted = 1;
+        // if space or tab and word started, add space.
+      } else if (*user_str == ' ' || *user_str == '\t') {
+        if (wordStarted == 1) {
           *(buff+currBuffLen) = ' ';
           currBuffLen++;
+          //word ended if space was put in.
+          wordStarted = 0;
         }
       }
+      user_str++;
     }
+    //checks trailing space and changes to . if exists.
+    if (*(buff+currBuffLen-1) == ' ') {
+      *(buff+currBuffLen-1) = '.';
+    }
+
     //We can then use memset to set the rest of the items in the buffer to "." using currBuffLen.
-    //here we cast a char pointer since we are not dealing with ints.
     memset((char*)(buff+currBuffLen), '.', BUFFER_SZ-currBuffLen);
     //returns the currBuffLen (BEFORE the "." were added in), so it would the actual length of the user provided string without the duplicate spaces and ".".
     return currBuffLen;
 }
 
 void print_buff(char *buff, int len){
-    printf("Buffer:");
+    printf("Buffer: ");
     for (int i=0; i<len; i++){
         putchar(*(buff+i));
     }
@@ -106,6 +112,12 @@ void usage(char *exename){
 }
 
 int count_words(char *buff, int len, int str_len){
+  //check for buffer overflow just in case
+  if (str_len > len) {
+    //returns -2 for buffer overflow error.
+    return -2;
+  }
+
   //initialize a word count var.
   int wc = 0;
   // a bug where it counts the last spacebar as a word. need fix.
@@ -119,6 +131,7 @@ int count_words(char *buff, int len, int str_len){
       // if curr is space and prev is not, means it is end of word, we increment word count.
     } else if (*(buff+i) == ' ' && *(buff+i-1) != ' ') {
       wc++;
+      // if curr is not space, and next iteration is last, means end of word, inc word count.
     } else if (*(buff+i) != ' ' && (i+1) == str_len){
       wc++;
     }
@@ -130,7 +143,7 @@ int count_words(char *buff, int len, int str_len){
 
 int reverse(char* buff, int bufferMaxLength, int actualBufferLength) {
   //reversing a string in place, will use two pointers one at the front and one at the end.
-  for (int i = 0; i <= (actualBufferLength/2)+1; i++) {
+  for (int i = 0; i <= (actualBufferLength/2); i++) {
     //takes temp letter
     char one = *(buff+actualBufferLength-i-1);
     //swaps last with first
@@ -222,6 +235,7 @@ int main(int argc, char *argv[]){
             break;
         case 'w':
             //prints individual words and their length in the sample string
+            word_print(buff, BUFFER_SZ, user_str_len);
             break;
         default:
             usage(argv[0]);
@@ -232,8 +246,6 @@ int main(int argc, char *argv[]){
     print_buff(buff,BUFFER_SZ);
     free(buff);
     buff = NULL;
-
-    printf("Buffer freed successfully.");
     exit(0);
 }
 
