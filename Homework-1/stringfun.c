@@ -29,25 +29,33 @@ int word_print(char *buff, int buffMaxLength, int actualBufferLength) {
     printf("Word Print\n");
     printf("----------\n");
     //word length tracker and word count tracker.
-    int wc = 1;
+    int wc = 0;
     int word_length = 0;
 
     
     for (int i = 0; i < actualBufferLength; i++) {
       //if not space, word start, length increment
       if (word_length == 0) {
-        printf("%d. ", wc++);
+        printf("%d. ", ++wc);
       }
-      if (*(buff+i) != ' ' && *(buff+i) != '.') {
+      if (*(buff+i) != ' ' && *(buff+i) != '.' ){
         //prints letters of word each iteration and increases length.
         printf("%c", *(buff+i));
         word_length++;
-      } else {
+      } else if (word_length > 0) {
         //prints out length, resets length, increments word count.
-        printf(" (%d)\n", word_length);
+        printf("(%d)\n", word_length);
         word_length = 0;
       }
     }
+
+    //this is to check the last word and print out the word length in the case that it doesn't end in space or "."
+    if (word_length > 0) {
+      printf("(%d)\n", word_length);
+    }
+
+
+    printf("\nNumber of words returned: %d\n", wc);
   }
   return 0;
 }
@@ -99,10 +107,11 @@ int setup_buff(char *buff, char *user_str, int len){
 }
 
 void print_buff(char *buff, int len){
-    printf("Buffer: ");
+    printf("Buffer:  [");
     for (int i=0; i<len; i++){
         putchar(*(buff+i));
     }
+    putchar(']');
     putchar('\n');
 }
 
