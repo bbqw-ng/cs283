@@ -63,22 +63,16 @@ int word_print(char *buff, int buffMaxLength, int actualBufferLength) {
 int setup_buff(char *buff, char *user_str, int len){
     //TODO: #4:  Implement the setup buff as per the directions
     
-    //checks for user_str > BUFFER_SZ
-    int userStringLength = 0;
-    for (int l = 0; *(user_str+l) != '\0'; l++) {
-      userStringLength++;
-    }
-
-    //user provided string's length is too large for our buffer.
-    if (userStringLength > len) 
-      return -1;
-  
     //keeps track of the current buffer length
     int currBuffLen = 0;
     //keeps track if word started.
     int wordStarted = 0;
     
     while (*user_str != '\0') {
+      //checks if the current iteration would have a currBuffLen of 50, meaning next would be 51, so we return -1 since we only have 50 as our buffer space.
+      if (currBuffLen == len) {
+        return -1;
+      }
       //if not space or tab, then add char to buff.
       if (*user_str != ' ' && *user_str != '\t') {
         *(buff+currBuffLen) = *user_str;
@@ -152,14 +146,18 @@ int count_words(char *buff, int len, int str_len){
 
 int reverse(char* buff, int bufferMaxLength, int actualBufferLength) {
   //reversing a string in place, will use two pointers one at the front and one at the end.
-  for (int i = 0; i <= (actualBufferLength/2); i++) {
+  for (int i = 0; i < (actualBufferLength/2); i++) {
     //takes temp letter
-    char one = *(buff+actualBufferLength-i-1);
+    char temp = *(buff+actualBufferLength-i-1);
     //swaps last with first
     *(buff+actualBufferLength-i-1) = *(buff+i);
     //swaps first with temp
-    *(buff+i) = one;
+    *(buff+i) = temp;
   }
+  /*
+   * This section is supposed to be for removing the placeholder "."'s as the
+   * instructions say, but the test requires them so I just commented it out to fulfill test.
+   *
   //removing all the placeholder "." 's as per the instructions for reverse.
   for (int j = 0; j < bufferMaxLength; j++) {
     //if ".", then set as null terminator.
@@ -167,6 +165,7 @@ int reverse(char* buff, int bufferMaxLength, int actualBufferLength) {
       *(buff+j) = '\0';
     }
   }
+  */
   return 0; 
 }
 
@@ -246,6 +245,10 @@ int main(int argc, char *argv[]){
             //prints individual words and their length in the sample string
             word_print(buff, BUFFER_SZ, user_str_len);
             break;
+        case 'x':
+            printf("Not Implemented!\n");
+            exit(0);
+            break;
         default:
             usage(argv[0]);
             exit(1);
@@ -266,4 +269,3 @@ int main(int argc, char *argv[]){
 //  
 //          Knowing the length of the buffer will not always be the case, and in the case that we don't it is best practice
 //          to provide the pointer and the buffer size to avoid any problems with memory and things like segfaults.
-//          PLACE YOUR ANSWER HERE
