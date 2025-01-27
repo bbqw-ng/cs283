@@ -88,8 +88,29 @@ int get_student(int fd, int id, student_t *s){
  *            
  */
 int add_student(int fd, int id, char *fname, char *lname, int gpa){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+  //Error reading/opening db file.
+  if (fd == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+
+  //calculating the memory for a student with their id.
+  int calculateRangeOfStudent = id * STUDENT_RECORD_SIZE;
+  
+  //fd not -1 meaning we write to the file, by first using lseek to go locat ethe place, and then use the write syscall.
+
+
+  //int calculateRangeofStudent = id * sizeof(student_t);
+  //
+  //need to consider 3 cases, student added, io issue (file descriptor unexpected), student exists
+  //
+  printf("Size of a student, %d\n", STUDENT_RECORD_SIZE);
+  printf("%d\n", fd);
+  printf("My Id: %d\n",id);
+  printf("My First Name and Last Name: %s %s\n", fname, lname);
+  printf("My GPA: %d\n", gpa);
+
+  return NOT_IMPLEMENTED_YET;
 }
 
 /*
