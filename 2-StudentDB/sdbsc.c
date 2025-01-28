@@ -59,7 +59,20 @@ int open_db(char *dbFile, bool should_truncate){
  *  console:  Does not produce any console I/O used by other functions
  */
 int get_student(int fd, int id, student_t *s){
-    return NOT_IMPLEMENTED_YET;
+  printf("file desc: %d\n", fd);
+  printf("student id: %d\n", id);
+  printf("student firstname %s\n", s->fname);
+  int calculateOffset = id * STUDENT_RECORD_SIZE;
+  if (lseek(fd, calculateOffset, SEEK_SET) == -1) {
+    return ERR_DB_FILE;
+  } 
+
+  if (read(fd, s, STUDENT_RECORD_SIZE) == -1) {
+    return ERR_DB_FILE;
+  } 
+
+  printf("student firstname %s\n", s->fname);
+  return NO_ERROR;
 }
 
 /*
@@ -94,23 +107,59 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa){
     return ERR_DB_FILE;
   }
 
-  //calculating the memory for a student with their id.
-  int calculateRangeOfStudent = id * STUDENT_RECORD_SIZE;
-  
-  //fd not -1 meaning we write to the file, by first using lseek to go locat ethe place, and then use the write syscall.
-
-
-  //int calculateRangeofStudent = id * sizeof(student_t);
-  //
-  //need to consider 3 cases, student added, io issue (file descriptor unexpected), student exists
-  //
   printf("Size of a student, %d\n", STUDENT_RECORD_SIZE);
   printf("%d\n", fd);
   printf("My Id: %d\n",id);
   printf("My First Name and Last Name: %s %s\n", fname, lname);
   printf("My GPA: %d\n", gpa);
 
-  return NOT_IMPLEMENTED_YET;
+  //calculating the offset for a student with their id.
+  int calculateOffset = id * STUDENT_RECORD_SIZE;
+  
+  //creates a new student an fills in the appropriate info
+  student_t newStudent;
+  newStudent.id = id;
+  strcpy(newStudent.fname, fname);
+  strcpy(newStudent.lname, lname);
+  newStudent.gpa = gpa;
+
+  //here we goto the offset of the student, if -1 -> unsuccessful, return err.
+  // lseek (file desc, offset, where to start from)
+  if (lseek(fd, calculateOffset, SEEK_SET) == -1) { 
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+  //here we read in the current position's student data (if any)
+  //make an aux var to store "data"
+  //
+  //Something is wrong with getting 0 space in code, ask professor tomorrow. it just sitn returning 0 for empty space.
+  student_t auxStudent;
+  student_t emptyStudent;
+  memset(&emptyStudent, 0, STUDENT_RECORD_SIZE);
+  if (read(fd, &auxStudent, STUDENT_RECORD_SIZE) == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+  printf("id; %d", auxStudent.id);
+
+  int compareCode = memcmp(&auxStudent.id, &emptyStudent, STUDENT_RECORD_SIZE);
+  printf("compare code: %d", compareCode);
+  //if not 0,  a student is there, do not write to that spot.
+  if (compareCode != 0) {
+    printf(M_ERR_DB_ADD_DUP, newStudent.id);
+    return ERR_DB_OP;
+  }
+
+  //writes to db, if -1, return error and print reason.
+  //write (file descriptor, what to write, size of thing to write)
+  if (write(fd, &newStudent, STUDENT_RECORD_SIZE) == -1) {
+    printf(M_ERR_DB_WRITE);
+    return ERR_DB_FILE;
+  } else {
+    //student successfully added.
+    printf(M_STD_ADDED, newStudent.id);
+    return NO_ERROR;
+  }
 }
 
 /*
@@ -236,7 +285,15 @@ int print_db(int fd){
  *            
  */
 void print_student(student_t *s){
-    printf(M_NOT_IMPL);
+  // if s has student data, print.
+  if (s != NULL || s->id != 0) {
+    //calculates the gpa
+    float calculatedGPA = (s->gpa) / 100.0;
+    printf(STUDENT_PRINT_HDR_STRING, "ID", "FIRST NAME", "LAST_NAME", "GPA");
+    printf(STUDENT_PRINT_FMT_STRING, s->id, s->fname, s->lname, calculatedGPA);
+  } else {
+    printf(M_ERR_STD_PRINT);
+  }
 }
 
 /*
