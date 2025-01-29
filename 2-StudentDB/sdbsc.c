@@ -101,62 +101,57 @@ int get_student(int fd, int id, student_t *s){
  *            
  */
 int add_student(int fd, int id, char *fname, char *lname, int gpa){
-  //Error reading/opening db file.
+  //fd < 0, error reading file
   if (fd == -1) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
   }
 
-  printf("Size of a student, %d\n", STUDENT_RECORD_SIZE);
-  printf("%d\n", fd);
-  printf("My Id: %d\n",id);
-  printf("My First Name and Last Name: %s %s\n", fname, lname);
-  printf("My GPA: %d\n", gpa);
-
-  //calculating the offset for a student with their id.
+  //Calculate offset based on user id (for lseek navigation)
   int calculateOffset = id * STUDENT_RECORD_SIZE;
   
-  //creates a new student an fills in the appropriate info
+  //Initializes new student with attributes
   student_t newStudent;
   newStudent.id = id;
   strcpy(newStudent.fname, fname);
   strcpy(newStudent.lname, lname);
   newStudent.gpa = gpa;
 
-  //here we goto the offset of the student, if -1 -> unsuccessful, return err.
-  // lseek (file desc, offset, where to start from)
+  //Move to offset for id
+  //-1 : err navigating file
   if (lseek(fd, calculateOffset, SEEK_SET) == -1) { 
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
   }
-  //here we read in the current position's student data (if any)
-  //make an aux var to store "data"
-  //
-  //Something is wrong with getting 0 space in code, ask professor tomorrow. it just sitn returning 0 for empty space.
+
+  //Create aux student for read syscall student data
   student_t auxStudent;
-  student_t emptyStudent;
-  memset(&emptyStudent, 0, STUDENT_RECORD_SIZE);
-  if (read(fd, &auxStudent, STUDENT_RECORD_SIZE) == -1) {
+  //Create empty student with all 0's
+  student_t emptyStudent = {0};
+
+  int readReturnCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
+  //returns: -1 -> error, 0 -> EOF, Some_Number -> # of bytes read
+  if (readReturnCode < 0) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
+  } else if (readReturnCode == STUDENT_RECORD_SIZE) {
+    //64 bytes read, compares aux student with empty student
+    int compareCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
+    //returns : 0 -> Same (space is empty), != 0, Different (something in space not same)
+    if (compareCode != 0) {
+      printf(M_ERR_DB_ADD_DUP, newStudent.id);
+      return ERR_DB_OP;
+    }
   }
-  printf("id; %d", auxStudent.id);
 
-  int compareCode = memcmp(&auxStudent.id, &emptyStudent, STUDENT_RECORD_SIZE);
-  printf("compare code: %d", compareCode);
-  //if not 0,  a student is there, do not write to that spot.
-  if (compareCode != 0) {
-    printf(M_ERR_DB_ADD_DUP, newStudent.id);
-    return ERR_DB_OP;
-  }
-
-  //writes to db, if -1, return error and print reason.
-  //write (file descriptor, what to write, size of thing to write)
-  if (write(fd, &newStudent, STUDENT_RECORD_SIZE) == -1) {
+  
+  int writeReturnCode = write(fd, &newStudent, STUDENT_RECORD_SIZE);
+  //returns: -1 -> err, Some_Number -> # of bytes written
+  if (writeReturnCode < 0 || writeReturnCode != STUDENT_RECORD_SIZE) {
     printf(M_ERR_DB_WRITE);
     return ERR_DB_FILE;
   } else {
-    //student successfully added.
+    //new student added
     printf(M_STD_ADDED, newStudent.id);
     return NO_ERROR;
   }
