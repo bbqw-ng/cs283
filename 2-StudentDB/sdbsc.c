@@ -372,7 +372,6 @@ int print_db(int fd){
     readReturnCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
   }
 
-  //checks readReturnCode for error 
   if (readReturnCode == -1) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
