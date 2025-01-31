@@ -267,22 +267,34 @@ int print_db(int fd){
     //Reaches EOF -> break;
     if (readReturnCode == 0) 
       break;
-    //Successful Student Read
+
+    //Successful Student Read -> 64 bytes
     if (readReturnCode == STUDENT_RECORD_SIZE) {
       student_t emptyStudent = {0};
       int memcmpCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
       //0 -> Empty (No Record | Deleted Record);
-      if (memcmpCode == 0) {
-        continue;
-      } else {
-        if (headerPrinted == 0) 
+      if (memcmpCode != 0) {
+        //if no header printed yet and memcmpCode != 0, print header
+        if (headerPrinted == 0) {
           printf(STUDENT_PRINT_HDR_STRING, "ID", "FIRST NAME", "LAST_NAME", "GPA");
-        printf(STUDENT_PRINT_FMT_STRING)--------------------------------------------------------------
+          headerPrinted = 1;
+        }
+        float calcGPA = auxStudent.gpa / 100.0;
+        printf(STUDENT_PRINT_FMT_STRING, auxStudent.id, auxStudent.fname, auxStudent.lname, calcGPA);
+
       }
     }
+
+    //reads next 64 bytes.
+    readReturnCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
   }
 
-
+  //checks readReturnCode for error 
+  if (readReturnCode == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+  return NO_ERROR;
 }
 
 /*
