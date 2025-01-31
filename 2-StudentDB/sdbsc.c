@@ -67,17 +67,15 @@ int get_student(int fd, int id, student_t *s){
   } 
 
   int readCode = read(fd, s, STUDENT_RECORD_SIZE);
-  if (readCode == -1) {
+  if (readCode < 0 || readCode != STUDENT_RECORD_SIZE) {
     return ERR_DB_FILE;
-  } else if (readCode == STUDENT_RECORD_SIZE) {
-    student_t emptyStudent = {0};
-    int compareCode = memcmp(s, &emptyStudent, STUDENT_RECORD_SIZE);
-    //if 0 means empty meaning not found
-    if (compareCode == 0) 
-      return SRCH_NOT_FOUND;
-  } else {
-    return SRCH_NOT_FOUND;
   }
+
+  int compareCode = memcmp(s, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
+  // 0 -> same (empty record) -> student not found in db
+  if (compareCode == 0) 
+    return SRCH_NOT_FOUND;
+
   return NO_ERROR;
 }
 
@@ -107,12 +105,6 @@ int get_student(int fd, int id, student_t *s){
  *            
  */
 int add_student(int fd, int id, char *fname, char *lname, int gpa){
-  //fd < 0, error reading file
-  if (fd == -1) {
-    printf(M_ERR_DB_READ);
-    return ERR_DB_FILE;
-  }
-
   //Calculate offset based on user id (for lseek navigation)
   int calculateOffset = id * STUDENT_RECORD_SIZE;
   
@@ -123,44 +115,39 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa){
   strcpy(newStudent.lname, lname);
   newStudent.gpa = gpa;
 
-  //Move to offset for id
-  //-1 : err navigating file
-  if (lseek(fd, calculateOffset, SEEK_SET) == -1) { 
+  //move to offset pos in db file
+  int seekCode = lseek(fd, calculateOffset, SEEK_SET);
+  if (seekCode == -1) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
   }
 
-  //Create aux student for read syscall student data
+  //create a tmep student to store data from read op
   student_t auxStudent;
-  //Create empty student with all 0's
-  student_t emptyStudent = {0};
-
-  int readReturnCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
-  //returns: -1 -> error, 0 -> EOF, Some_Number -> # of bytes read
-  if (readReturnCode < 0) {
+  int readCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
+  if (readCode < 0) {
     printf(M_ERR_DB_READ);
-    return ERR_DB_FILE;
-  } else if (readReturnCode == STUDENT_RECORD_SIZE) {
-    //64 bytes read, compares aux student with empty student
-    int compareCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
-    //returns : 0 -> Same (space is empty), != 0, Different (something in space not same)
-    if (compareCode != 0) {
+    return ERR_DB_OP;
+  } 
+
+  //need to check if data there is all 0's else, duplicate student
+  if (readCode == STUDENT_RECORD_SIZE) {
+    int compCode = memcmp(&newStudent, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
+    if (compCode != 0) {
       printf(M_ERR_DB_ADD_DUP, newStudent.id);
       return ERR_DB_OP;
     }
   }
 
-  
-  int writeReturnCode = write(fd, &newStudent, STUDENT_RECORD_SIZE);
-  //returns: -1 -> err, Some_Number -> # of bytes written
-  if (writeReturnCode < 0 || writeReturnCode != STUDENT_RECORD_SIZE) {
+  int writeCode = write(fd, &newStudent, STUDENT_RECORD_SIZE);
+  if (writeCode < 0 || writeCode != STUDENT_RECORD_SIZE) {
     printf(M_ERR_DB_WRITE);
-    return ERR_DB_FILE;
-  } else {
-    //new student added
-    printf(M_STD_ADDED, newStudent.id);
-    return NO_ERROR;
+    return ERR_DB_OP;
   }
+
+  //sucessfully wrote student to database
+  printf(M_STD_ADDED, newStudent.id);
+  return NO_ERROR;
 }
 
 /*
@@ -280,20 +267,19 @@ int count_db_records(int fd){
     return ERR_DB_FILE;
   } 
 
-  //setup student for read
+  //setup student to hold data from read
   student_t auxStudent;
-
   int readCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
-  while (readCode != -1) {
+
+  while (readCode > 0) {
     if (readCode == STUDENT_RECORD_SIZE) {
       //successful read, need to check mem values
-      student_t emptyStudent = {0};
-      int compCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
+      int compCode = memcmp(&auxStudent, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
       //if read student != blank student, student exists, inc counter.
       if (compCode != 0) 
         counter++;
     } else {
-      break;
+      continue;
     }
     //read next entry
     readCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE); 
@@ -310,7 +296,6 @@ int count_db_records(int fd){
     printf(M_DB_RECORD_CNT, counter);
   else 
     printf(M_DB_EMPTY);
-
   return counter;
 }
 
