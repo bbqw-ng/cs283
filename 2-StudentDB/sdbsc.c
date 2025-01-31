@@ -59,19 +59,25 @@ int open_db(char *dbFile, bool should_truncate){
  *  console:  Does not produce any console I/O used by other functions
  */
 int get_student(int fd, int id, student_t *s){
-  printf("file desc: %d\n", fd);
-  printf("student id: %d\n", id);
-  printf("student firstname %s\n", s->fname);
   int calculateOffset = id * STUDENT_RECORD_SIZE;
-  if (lseek(fd, calculateOffset, SEEK_SET) == -1) {
+
+  int seekCode = lseek(fd, calculateOffset, SEEK_SET);
+  if (seekCode == -1) {
     return ERR_DB_FILE;
   } 
 
-  if (read(fd, s, STUDENT_RECORD_SIZE) == -1) {
+  int readCode = read(fd, s, STUDENT_RECORD_SIZE);
+  if (readCode == -1) {
     return ERR_DB_FILE;
-  } 
-
-  printf("student firstname %s\n", s->fname);
+  } else if (readCode == STUDENT_RECORD_SIZE) {
+    student_t emptyStudent = {0};
+    int compareCode = memcmp(s, &emptyStudent, STUDENT_RECORD_SIZE);
+    //if 0 means empty meaning not found
+    if (compareCode == 0) 
+      return SRCH_NOT_FOUND;
+  } else {
+    return SRCH_NOT_FOUND;
+  }
   return NO_ERROR;
 }
 
@@ -179,9 +185,65 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa){
  *            M_ERR_DB_WRITE     error writing to db file (adding student)
  *            
  */
-int del_student(int fd, int id){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int del_student(int fd, int id) {
+  student_t studentToDelete;
+  //gets student with id we want to delete.
+  int searchOutcome = get_student(fd, id, &studentToDelete);
+
+  //student not found in database
+  if (searchOutcome == SRCH_NOT_FOUND) {
+    printf(M_STD_NOT_FND_MSG, id);
+    return ERR_DB_OP;
+  }
+  //error reading from DB
+  if (searchOutcome == ERR_DB_FILE) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  } 
+
+  //STUDENT EXISTS ------------------------------------------------
+  
+  //calc offset for lseek to move to correct position of student id
+  int offset = id * STUDENT_RECORD_SIZE;
+  int seekCode = lseek(fd, offset, SEEK_SET);
+  if (seekCode == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  } 
+
+  //write empty student record at lseek position
+  int writeCode = write(fd, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
+  if (writeCode < 0 || writeCode != STUDENT_RECORD_SIZE) {
+    printf(M_ERR_DB_WRITE);
+    return ERR_DB_OP;
+  } 
+
+  //sanity check 
+  //we need lseek again since we moved pos with write.
+  seekCode = lseek(fd, offset, SEEK_SET);
+  if (seekCode == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  } 
+
+  //read at position of deleted student
+  int readCode = read(fd, &studentToDelete, STUDENT_RECORD_SIZE);
+  if (readCode < 0 || readCode != STUDENT_RECORD_SIZE) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+
+  int compCode = memcmp(&studentToDelete, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
+  // 0 -> current record = same as empty student (we want this)
+  if (compCode == 0) {
+    printf(M_STD_DEL_MSG, id);
+    return NO_ERROR;
+  } else {
+    //else something went wrong with the write op
+    printf(M_ERR_DB_WRITE);
+    return ERR_DB_OP;
+  }
+
 }
 
 /*
@@ -209,8 +271,47 @@ int del_student(int fd, int id){
  *            
  */
 int count_db_records(int fd){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+  int counter = 0;
+
+  //moving file cursor to "first" student record
+  int seekCode = lseek(fd, STUDENT_RECORD_SIZE, SEEK_SET);
+  if (seekCode == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  } 
+
+  //setup student for read
+  student_t auxStudent;
+
+  int readCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
+  while (readCode != -1) {
+    if (readCode == STUDENT_RECORD_SIZE) {
+      //successful read, need to check mem values
+      student_t emptyStudent = {0};
+      int compCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
+      //if read student != blank student, student exists, inc counter.
+      if (compCode != 0) 
+        counter++;
+    } else {
+      break;
+    }
+    //read next entry
+    readCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE); 
+  }
+
+  //read error handle
+  if (readCode == -1) {
+    printf(M_ERR_DB_READ);
+    return ERR_DB_FILE;
+  }
+
+  //if non-zero val print count.
+  if (counter)
+    printf(M_DB_RECORD_CNT, counter);
+  else 
+    printf(M_DB_EMPTY);
+
+  return counter;
 }
 
 /*
@@ -247,9 +348,8 @@ int count_db_records(int fd){
  *            
  */
 int print_db(int fd){
-  //starts at user id of 1 and calculates the offset for that for lseek
-  int calculateOffset = 1 * STUDENT_RECORD_SIZE;
-  int seekCode = lseek(fd, calculateOffset, SEEK_SET);
+  //lseeks at id = 1, which is just STUDENT_RECORD_SIZE;
+  int seekCode = lseek(fd, STUDENT_RECORD_SIZE, SEEK_SET);
   //error handle lseek
   if (seekCode == -1) {
     printf(M_ERR_DB_READ);
@@ -293,6 +393,11 @@ int print_db(int fd){
   if (readReturnCode == -1) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
+  }
+  
+  // no students were found header not printed
+  if (headerPrinted == 0) {
+    printf(M_DB_EMPTY);
   }
   return NO_ERROR;
 }
