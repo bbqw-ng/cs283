@@ -139,6 +139,7 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa){
     }
   }
 
+  //writing new student to db
   int writeCode = write(fd, &newStudent, STUDENT_RECORD_SIZE);
   if (writeCode < 0 || writeCode != STUDENT_RECORD_SIZE) {
     printf(M_ERR_DB_WRITE);
@@ -335,7 +336,6 @@ int count_db_records(int fd){
 int print_db(int fd){
   //lseeks at id = 1, which is just STUDENT_RECORD_SIZE;
   int seekCode = lseek(fd, STUDENT_RECORD_SIZE, SEEK_SET);
-  //error handle lseek
   if (seekCode == -1) {
     printf(M_ERR_DB_READ);
     return ERR_DB_FILE;
@@ -355,8 +355,7 @@ int print_db(int fd){
 
     //Successful Student Read -> 64 bytes
     if (readReturnCode == STUDENT_RECORD_SIZE) {
-      student_t emptyStudent = {0};
-      int memcmpCode = memcmp(&auxStudent, &emptyStudent, STUDENT_RECORD_SIZE);
+      int memcmpCode = memcmp(&auxStudent, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
       //0 -> Empty (No Record | Deleted Record);
       if (memcmpCode != 0) {
         //if no header printed yet and memcmpCode != 0, print header
@@ -369,8 +368,7 @@ int print_db(int fd){
 
       }
     }
-
-    //reads next 64 bytes.
+    //reads next student (64 bytes)
     readReturnCode = read(fd, &auxStudent, STUDENT_RECORD_SIZE);
   }
 
