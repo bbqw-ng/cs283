@@ -277,7 +277,7 @@ int print_db(int fd){
       } else {
         if (headerPrinted == 0) 
           printf(STUDENT_PRINT_HDR_STRING, "ID", "FIRST NAME", "LAST_NAME", "GPA");
-        printf(STUDENT_PRINT_FMT_STRING)--------------------------------------------------------------
+        printf(STUDENT_PRINT_FMT_STRING, 
       }
     }
   }
