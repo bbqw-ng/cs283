@@ -39,7 +39,7 @@ Please answer the following questions and submit in your repo for the second ass
     ```
     Can you think of any reason why the above implementation would be a **very bad idea** using the C programming language?  Specifically, address why the above code introduces a subtle bug that could be hard to identify at runtime? 
 
-    > **ANSWER:** _start here_
+    > **ANSWER:** This would be a very bad idea using the C prog lang because in this function student gets memory from the stack, and once the function completes, memory from the stack is automatically freed, so even if you return student, it will be empty.
 
 3. Another way the `get_student(...)` function could be implemented is as follows:
 
@@ -72,7 +72,7 @@ Please answer the following questions and submit in your repo for the second ass
     ```
     In this implementation the storage for the student record is allocated on the heap using `malloc()` and passed back to the caller when the function returns. What do you think about this alternative implementation of `get_student(...)`?  Address in your answer why it work work, but also think about any potential problems it could cause.  
     
-    > **ANSWER:** This approach will work, since you malloc and grant mem from the heap and , but (1), since it is inside of a function, if the programmer were to make a mistake and not return the student or free it at the end of the function, it would cause a memory leak, since after the function completes, you are the out of scope.
+    > **ANSWER:** this approach will work since you are allocating memory from the heap and unlike the stack, it doesn't automatically empty the memory after function ends, which means data inside the student would be saved even outside the scope of the function. Although it works, it introduces us to the unnecessary risks of a memory leak in the case that the programmer forgets to free it in the end. (Which in the code snippet they do not forget atleast in scope)
 
 
 4. Lets take a look at how storage is managed for our simple database. Recall that all student records are stored on disk using the layout of the `student_t` structure (which has a size of 64 bytes).  Lets start with a fresh database by deleting the `student.db` file using the command `rm ./student.db`.  Now that we have an empty database lets add a few students and see what is happening under the covers.  Consider the following sequence of commands:
@@ -102,11 +102,11 @@ Please answer the following questions and submit in your repo for the second ass
 
     - Please explain why the file size reported by the `ls` command was 128 bytes after adding student with ID=1, 256 after adding student with ID=3, and 4160 after adding the student with ID=64? 
 
-        > **ANSWER:** _start here_
+        > **ANSWER:** The file size reported by the ls command was 128 bytes after adding student with id = 1 due to the concept of blocks, since we start at id 1, we already have 64 bytes of empty space, but now since we added a new student, it adds another 64 non-empty space, making it 128 bytes. This same logic applies to the other ids. Empty space counts as space as well (blocks).
 
     -   Why did the total storage used on the disk remain unchanged when we added the student with ID=1, ID=3, and ID=63, but increased from 4K to 8K when we added the student with ID=64? 
 
-        > **ANSWER:** _start here_
+        > **ANSWER:** The total storage that is used on the disks remained unchanged when we added students with id 1,3,63, but increased from 4k to 8k when we added student 64 due to how blocks work, Each block in this case is 4k, and students 1-63 live inside that block, but once student 64 is added, another block is needed which is why the file is now 8k (it took another block).
 
     - Now lets add one more student with a large student ID number  and see what happens:
 
@@ -119,4 +119,4 @@ Please answer the following questions and submit in your repo for the second ass
         ```
         We see from above adding a student with a very large student ID (ID=99999) increased the file size to 6400000 as shown by `ls` but the raw storage only increased to 12K as reported by `du`.  Can provide some insight into why this happened?
 
-        > **ANSWER:**  _start here_
+        > **ANSWER:**  It only increased to 12k as reported by du, since in this case it only took 3 blocks. It only took 3 blocks since the vast majority of the space is unwritten (no data) and sparse file techniques are used to handle these empty spaces. du reports space that is used by actual data and not unwritten data holes.
