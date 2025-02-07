@@ -44,12 +44,41 @@
  *
  *  See the provided test cases for output expectations.
  */
-int main()
-{
-    char *cmd_buff;
-    int rc = 0;
-    command_list_t clist;
-
-    printf(M_NOT_IMPL);
-    exit(EXIT_NOT_IMPL);
+int checkExit(char *cmd_buff) {
+  int compareCode = strncmp(cmd_buff, "exit", 4);
+  if (compareCode == 0)
+    return 1;
+  return 0;
 }
+
+int main() {
+  char *cmd_buff;
+  //Assigning mem from the heap for cmd_buff
+  cmd_buff = malloc(sizeof(char) * ARG_MAX);
+
+  int rc = 0;
+  command_list_t clist;
+
+  while(1) {
+    printf("%s", SH_PROMPT);
+    if (fgets(cmd_buff, ARG_MAX, stdin) == NULL) {
+      printf("\n");
+      break;
+    }
+    //Removes Trailing Spaces
+    cmd_buff[strcspn(cmd_buff,"\n")] = '\0';
+    printf("User Input: %s\n", cmd_buff);
+
+    //checking for the exit command
+    if (checkExit(cmd_buff)) {
+      //frees the mem from heap to avoid mem leaks
+      free(cmd_buff);
+      cmd_buff = NULL;
+      exit(0);
+    } 
+  }
+
+  free(cmd_buff);
+  cmd_buff = NULL;
+}
+
