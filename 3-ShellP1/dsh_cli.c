@@ -45,6 +45,7 @@
  *  See the provided test cases for output expectations.
  */
 int checkExit(char *cmd_buff) {
+  //compares the first 4 characters to exit
   int compareCode = strncmp(cmd_buff, "exit", 4);
   if (compareCode == 0)
     return 1;
@@ -64,8 +65,6 @@ int main() {
   char *cmd_buff;
   //Assigning mem from the heap for cmd_buff
   cmd_buff = malloc(SH_CMD_MAX);
-
-  int rc = 0;
   command_list_t clist;
 
   while(1) {
@@ -101,6 +100,7 @@ int main() {
     }
   }
 
+  //freeing buffer
   free(cmd_buff);
   cmd_buff = NULL;
 }
