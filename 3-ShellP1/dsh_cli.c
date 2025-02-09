@@ -67,7 +67,6 @@ int main() {
     }
     //Removes Trailing Spaces
     cmd_buff[strcspn(cmd_buff,"\n")] = '\0';
-    printf("User Input: %s\n", cmd_buff);
 
     //checking for the exit command
     if (checkExit(cmd_buff)) {
@@ -76,6 +75,24 @@ int main() {
       cmd_buff = NULL;
       exit(0);
     } 
+
+    //here we build the command list using dshcli.c 's build_cmd_list
+    int listCode = build_cmd_list(cmd_buff, &clist);
+    if (listCode == OK) {
+      printf("PARSED COMMAND LINE - TOTAL COMMANDS %d\n", clist.num);
+
+      for (int i = 0; i < clist.num; i++) {
+        printf("<%d> %s ", i+1, clist.commands[i].exe);
+        if (strlen(clist.commands[i].args) > 0)
+          printf("[%s]\n", clist.commands[i].args);
+        else 
+          printf("\n");
+      }
+
+    } else if (listCode == ERR_TOO_MANY_COMMANDS) {
+      printf("error: piping limited to 8 commands\n");
+    } 
+
   }
 
   free(cmd_buff);
