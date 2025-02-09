@@ -60,38 +60,36 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
     }
   }
 
-  //Now we want to add commands into the command list along with their arguments 
-  //We want to strip the spaces (leading and trailing)
-  //We will utilize strtok(command, delimiter);
-
+  //Establishing a delimiter var for strtok_r
   const char *delim = PIPE_STRING;
-  //creates a copy of cmd_list since strtok modifies string
-  char *cmdCpy = malloc(ARG_MAX);
-  strcpy(cmdCpy, cmd_line);
 
-  char *token = strtok(cmdCpy, delim);
-  char *trimmed = rightTrim(leftTrim(token));
-    
-  //turn it into a command
-  command_t *command = commandSplitter(trimmed);
+  //creates a copy of cmd_list since strtok_r modifies string in place
+  char *cmdCpy = strdup(cmd_line);
+
+  //Establish a save pointer for strtok_r since strtok is static
+  char *save;
+  char *token = strtok_r(cmdCpy, delim, &save);
   
-  //add command into command list
   int cmdNumber = 0;
-  clist->commands[cmdNumber] = *command;
-  clist->num = ++cmdNumber;
-  
   while (token != NULL) {
-    //with strtok, use NULL after first strtok to continue delimiting
-    token = strtok(NULL, delim);
-    printf("%s", token);
-    //Need to check for NULL, or else seg fault since dereferencing null causes seg fault
-    if (token != NULL) {
-      trimmed = rightTrim(leftTrim(token));
-      command = commandSplitter(trimmed);
-      clist->commands[cmdNumber] = *command;
-      clist->num = ++cmdNumber;
-    }
+    //Removes leading and trailing whitespace
+    char *trimmed = strdup(rightTrim(leftTrim(token)));
+    //Splits command into exe and args
+    command_t *command = commandSplitter(trimmed);
+    //Adds into command list
+    clist->commands[cmdNumber] = *command;
+    clist->num = ++cmdNumber;
+    
+    //Need to free this memory since memory was allocated for the duplication
+    free(trimmed);
+    trimmed = NULL; 
+    free(command);
+    command = NULL;
+    
+    //Gets next token
+    token = strtok_r(NULL, delim, &save);
   }
+
   free(cmdCpy);
   cmdCpy = NULL;
   return OK;
@@ -119,26 +117,27 @@ char *rightTrim(char *command) {
 
 //error with command splitter splitting by spaces in the thing
 command_t *commandSplitter(char *command) {
-  command_t *cmd = malloc(ARG_MAX + EXE_MAX);
+  command_t *cmd = malloc(sizeof(command_t));
 
-  //need this for making so it doesnt touich command?
-  char *cmdCpy = malloc(ARG_MAX);
-  strcpy(cmdCpy, command);
-
+  char *copy = strdup(command);
   const char *delim = " ";
 
+  char *save;
+
   //Parsing exe
-  char *token = strtok(cmdCpy, delim);
-  printf("%s", token);
+  char *token = strtok_r(copy, delim, &save);
   if (token != NULL) 
     strcpy(cmd->exe, token);
 
   //Parsing arguments
   //command = pos 0 + length of token (ex: 4) + 1 (ignores the space) = the args after exe.
-  char *args = command + strlen(token) + 1;
+  char *args = save;
   if (args != NULL) 
     strcpy(cmd->args, args);
 
+  //freeing mem
+  free(copy);
+  copy = NULL;
 
   return cmd;
 }

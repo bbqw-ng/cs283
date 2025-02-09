@@ -54,14 +54,14 @@ int checkExit(char *cmd_buff) {
 int main() {
   char *cmd_buff;
   //Assigning mem from the heap for cmd_buff
-  cmd_buff = malloc(sizeof(char) * ARG_MAX);
+  cmd_buff = malloc(SH_CMD_MAX);
 
   int rc = 0;
   command_list_t clist;
 
   while(1) {
     printf("%s", SH_PROMPT);
-    if (fgets(cmd_buff, ARG_MAX, stdin) == NULL) {
+    if (fgets(cmd_buff, SH_CMD_MAX, stdin) == NULL) {
       printf("\n");
       break;
     }
