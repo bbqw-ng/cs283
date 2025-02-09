@@ -51,6 +51,15 @@ int checkExit(char *cmd_buff) {
   return 0;
 }
 
+int checkBlankCommand(char *cmd_buff) {
+  int compareCode = 0;
+  // if the length of buffer is less than 1, that means it is an empty command.
+  if (strlen(cmd_buff) < 1) {
+    compareCode = 1;
+  }
+  return compareCode;
+}
+
 int main() {
   char *cmd_buff;
   //Assigning mem from the heap for cmd_buff
@@ -68,31 +77,28 @@ int main() {
     //Removes Trailing Spaces
     cmd_buff[strcspn(cmd_buff,"\n")] = '\0';
 
-    //checking for the exit command
-    if (checkExit(cmd_buff)) {
+    //Checking for special commands
+    if (checkBlankCommand(cmd_buff)) {
+      printf(CMD_WARN_NO_CMD);
+    } else if (checkExit(cmd_buff)) {
       //frees the mem from heap to avoid mem leaks
       free(cmd_buff);
       cmd_buff = NULL;
       exit(0);
-    } 
-
-    //here we build the command list using dshcli.c 's build_cmd_list
-    int listCode = build_cmd_list(cmd_buff, &clist);
-    if (listCode == OK) {
-      printf("PARSED COMMAND LINE - TOTAL COMMANDS %d\n", clist.num);
-
-      for (int i = 0; i < clist.num; i++) {
-        printf("<%d> %s ", i+1, clist.commands[i].exe);
-        if (strlen(clist.commands[i].args) > 0)
-          printf("[%s]\n", clist.commands[i].args);
-        else 
-          printf("\n");
-      }
-
-    } else if (listCode == ERR_TOO_MANY_COMMANDS) {
-      printf("error: piping limited to 8 commands\n");
-    } 
-
+    } else {
+      //here we build the command list using dshcli.c 's build_cmd_list
+      int listCode = build_cmd_list(cmd_buff, &clist);
+      if (listCode == OK) {
+        printf("PARSED COMMAND LINE - TOTAL COMMANDS %d\n", clist.num);
+        for (int i = 0; i < clist.num; i++) {
+          printf("<%d> %s ", i+1, clist.commands[i].exe);
+          if (strlen(clist.commands[i].args) > 0)
+            printf("[%s]\n", clist.commands[i].args);
+          else 
+            printf("\n");
+        }
+      } else if (listCode == ERR_TOO_MANY_COMMANDS) { printf("error: piping limited to 8 commands\n"); }
+    }
   }
 
   free(cmd_buff);
