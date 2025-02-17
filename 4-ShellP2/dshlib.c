@@ -143,14 +143,9 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
         start = trimmed+i+2;
       } 
     }
-
-    for (int i = 0; i <= cmdNum; i++) {
-      for (int j = 0; j <= argIndex; j++) {
-        printf("%s\n", cmdBuff[cmdNum].argv[j]);
-      }
-    }
-
     cmdBuff->argc = cmdNum;
+
+    printCmdBuff(cmdBuff, argIndex);
 
     token = strtok_r(NULL, delim, &save);
 
@@ -176,6 +171,15 @@ char *rightTrim(char *cmd) {
   *(trailing + 1) = '\0';
   return cmd;
 }
+
+void printCmdBuff(cmd_buff_t *cmdBuff, int argIndex) {
+  for (int i = 0; i <= cmdBuff->argc ;i++) {
+    for (int j = 0; j < argIndex; j++) {
+      printf("%s\n", cmdBuff[i].argv[j]);
+    }
+  }
+}
+
 
 
 
