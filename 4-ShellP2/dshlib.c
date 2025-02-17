@@ -109,18 +109,40 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   char *save;
 
   char *token = strtok_r(cmdCpy, delim, &save);
-  //Keep track of the number of total commands
+  //Keep track of the number of total commands (different than args of a cmd)
   int cmdNum = 0;
 
-  //Splits it by the pipe |
-  if (token != NULL) {
+  //Splits it by the pipe \ //
+  while (token != NULL) {
     char *trimmed = strdup(rightTrim(leftTrim(token)));
-    //now we need to take the trimmed and split it by space and perhaps quotes:
-    //use the picture that you took in class for the quotes and things
-    //we have to dupe it since we free that mem later. we need to remember to free this mem later
-    cmdBuff->argv[cmdNum] = strdup(trimmed);
-    printf("argv [%d], %s\n", cmdNum, cmdBuff->argv[cmdNum]);
-    cmdBuff->argc = ++cmdNum;
+    bool quoteMode = false;
+    char *start = trimmed;
+    int argIndex = 0;
+    //parsing the command
+    for (int i = 0; *(trimmed+i) != '\0'; i++) {
+      if (*(trimmed+i) == ' ' && !quoteMode) {
+        *(trimmed+i) = '\0';
+        cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+        start = trimmed+i+1;
+      }
+      if (*(trimmed+i) == '\"' && !quoteMode) {
+        quoteMode = true;
+        start = trimmed+i+1;
+      } else if (*(trimmed+i) == '\"' && quoteMode) {
+        quoteMode = false;
+        *(trimmed+i) = '\0';
+        cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+        start = trimmed+i+1;
+      }
+    }
+    
+    for (int i = 0; i <= cmdNum; i++) {
+      for (int j = 0; j <= argIndex; j++) {
+        printf("%s\n", cmdBuff[cmdNum].argv[i]);
+      }
+    }
+
+    cmdBuff->argc = cmdNum;
 
     token = strtok_r(NULL, delim, &save);
 
