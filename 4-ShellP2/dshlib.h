@@ -51,7 +51,9 @@ int alloc_cmd_buff(cmd_buff_t *cmd_buff);
 int free_cmd_buff(cmd_buff_t *cmd_buff);
 int clear_cmd_buff(cmd_buff_t *cmd_buff);
 int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff);
-
+char *rightTrim(char *cmd);
+char *leftTrim(char *cmd);
+void commandSplitter(char *cmd, cmd_buff_t *cmdBuff, int cmdNum);
 //built in command stuff
 typedef enum {
     BI_CMD_EXIT,

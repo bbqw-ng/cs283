@@ -56,7 +56,6 @@ int exec_local_cmd_loop()
   char *cmd_buff = malloc(SH_CMD_MAX);
   int rc = 0;
   cmd_buff_t cmd;
-  cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
   while(1) {
     printf("%s", SH_PROMPT);
@@ -64,13 +63,11 @@ int exec_local_cmd_loop()
       printf("\n");
       break;
     }
-
     //removing trailing space
     cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
-    int buildCode = build_cmd_buff(cmd_buff, &cmd);
-    if (buildCode == WARN_NO_CMDS) {
-      continue;
-    } 
+    printf("%s\n", cmd_buff);
+    
+    int buildCmdCode = build_cmd_buff(cmd_buff, &cmd);
   }
     // TODO IMPLEMENT parsing input to cmd_buff_t *cmd_buff
 
@@ -79,21 +76,16 @@ int exec_local_cmd_loop()
 
     // TODO IMPLEMENT if not built-in command, fork/exec as an external command
     // for example, if the user input is "ls -l", you would fork/exec the command "ls" with the arg "-l"
-    free(cmd_buff);
+
     return OK;
 }
 
 int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   //Empty Command
-  if (cmdLine == NULL || strlen(cmdLine) < 1)  {
+  if (strlen(cmdLine) < 1 || cmdLine == NULL) {
     printf(CMD_WARN_NO_CMD);
     return WARN_NO_CMDS;
   }
-
-  //copy the original buff into the command
-  strcpy(cmdBuff->_cmd_buffer, cmdLine);
-  printf("%s\n", cmdBuff->_cmd_buffer);  
-
   //Check cmdLine for length violation or violation of # of commands
   for (int i = 0, j = 0; *(cmdLine+i) != '\0'; i++) {
     if (*(cmdLine+i) == PIPE_CHAR) 
@@ -112,24 +104,12 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   //Keep track of the number of total commands
   int cmdNum = 0;
 
-  //Splits it by the pipe |
-  if (token != NULL) {
-    char *trimmed = strdup(rightTrim(leftTrim(token)));
-    //now we need to take the trimmed and split it by space and perhaps quotes:
-    //use the picture that you took in class for the quotes and things
-    //we have to dupe it since we free that mem later. we need to remember to free this mem later
-    cmdBuff->argv[cmdNum] = strdup(trimmed);
-    printf("argv [%d], %s\n", cmdNum, cmdBuff->argv[cmdNum]);
-    cmdBuff->argc = ++cmdNum;
-
-    token = strtok_r(NULL, delim, &save);
-
-    free(trimmed);
-    trimmed = NULL;
+  while (token != NULL) {
+    char *trimmed = strdup(rightTrim(leftTrim(cmdLine)));
   }
 
-  free(cmdCpy);
-  cmdCpy = NULL;
+  printf("This is the cmdLine: %s\n", cmdLine);
+  
   return OK;
 }
 
