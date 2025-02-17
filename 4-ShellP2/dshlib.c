@@ -70,9 +70,13 @@ int exec_local_cmd_loop()
     int buildCode = build_cmd_buff(cmd_buff, &cmd);
     if (buildCode == WARN_NO_CMDS) {
       continue;
-    } 
+    } else if (buildCode == OK_EXIT) {
+      //successful exit no problem
+      exit(0);
+    } else if (buildCode == DRAGON) {
+      //printDragon();
+    }
   }
-    // TODO IMPLEMENT parsing input to cmd_buff_t *cmd_buff
 
     // TODO IMPLEMENT if built-in command, execute builtin logic for exit, cd (extra credit: dragon)
     // the cd command should chdir to the provided directory; if no directory is provided, do nothing
@@ -92,7 +96,6 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
 
   //copy the original buff into the command
   strcpy(cmdBuff->_cmd_buffer, cmdLine);
-  printf("%s\n", cmdBuff->_cmd_buffer);  
 
   //Check cmdLine for length violation or violation of # of commands
   for (int i = 0, j = 0; *(cmdLine+i) != '\0'; i++) {
@@ -116,7 +119,7 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   while (token != NULL) {
     char *trimmed = strdup(rightTrim(leftTrim(token)));
     int trimmedOriginalLength = strlen(trimmed);
-    printf("%d\n", trimmedOriginalLength);
+
     bool quoteMode = false;
     char *start = trimmed;
     int argIndex = 0;
@@ -124,34 +127,36 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
     //parsing the command
     for (int i = 0; i <= trimmedOriginalLength; i++) {
       if ( (*(trimmed+i) == ' ' || *(trimmed+i) == '\0') && !quoteMode && (i != trimmedOriginalLength)) {
-        //sets curr pos as null
         *(trimmed+i) = '\0';
         cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
-        //sets next pos at 1 char after null
         start = trimmed+i+1;
-      }
-      if (*(trimmed+i) == '\"' && !quoteMode) {
+      } else if (*(trimmed+i) == '\"' && !quoteMode) {
         quoteMode = true;
-        //should be after the quote index so add 1 from current pos
         start = trimmed+i+1;
       } else if (*(trimmed+i) == '\"' && quoteMode) {
         quoteMode = false;
-        //seeting null term for curre pos which is "
         *(trimmed+i) = '\0';
         cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
-        //sets start as the next char after the null term (curr pos) so curr pos +2
         start = trimmed+i+2;
       } 
     }
-    cmdBuff->argc = cmdNum;
 
-    printCmdBuff(cmdBuff, argIndex);
-
-    token = strtok_r(NULL, delim, &save);
+    //Adds the last argument into the argv for the command
+    if (*start != '\0') {
+      cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+    }
+    //null terminating the current string
+    cmdBuff[cmdNum].argv[argIndex] = NULL;
+    cmdBuff->argc = ++cmdNum;
 
     free(trimmed);
     trimmed = NULL;
+
+    token = strtok_r(NULL, delim, &save);
   }
+
+  //printing cmd for sanity check
+  printCmdBuff(cmdBuff);
 
   free(cmdCpy);
   cmdCpy = NULL;
@@ -172,9 +177,9 @@ char *rightTrim(char *cmd) {
   return cmd;
 }
 
-void printCmdBuff(cmd_buff_t *cmdBuff, int argIndex) {
-  for (int i = 0; i <= cmdBuff->argc ;i++) {
-    for (int j = 0; j < argIndex; j++) {
+void printCmdBuff(cmd_buff_t *cmdBuff) {
+  for (int i = 0; i < cmdBuff->argc ;i++) {
+    for (int j = 0; cmdBuff[i].argv[j] != NULL; j++) {
       printf("%s\n", cmdBuff[i].argv[j]);
     }
   }
