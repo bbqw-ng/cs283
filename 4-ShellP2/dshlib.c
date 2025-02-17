@@ -115,30 +115,38 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   //Splits it by the pipe \ //
   while (token != NULL) {
     char *trimmed = strdup(rightTrim(leftTrim(token)));
+    int trimmedOriginalLength = strlen(trimmed);
+    printf("%d\n", trimmedOriginalLength);
     bool quoteMode = false;
     char *start = trimmed;
     int argIndex = 0;
+
     //parsing the command
-    for (int i = 0; *(trimmed+i) != '\0'; i++) {
-      if (*(trimmed+i) == ' ' && !quoteMode) {
+    for (int i = 0; i <= trimmedOriginalLength; i++) {
+      if ( (*(trimmed+i) == ' ' || *(trimmed+i) == '\0') && !quoteMode && (i != trimmedOriginalLength)) {
+        //sets curr pos as null
         *(trimmed+i) = '\0';
         cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+        //sets next pos at 1 char after null
         start = trimmed+i+1;
       }
       if (*(trimmed+i) == '\"' && !quoteMode) {
         quoteMode = true;
+        //should be after the quote index so add 1 from current pos
         start = trimmed+i+1;
       } else if (*(trimmed+i) == '\"' && quoteMode) {
         quoteMode = false;
+        //seeting null term for curre pos which is "
         *(trimmed+i) = '\0';
         cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
-        start = trimmed+i+1;
-      }
+        //sets start as the next char after the null term (curr pos) so curr pos +2
+        start = trimmed+i+2;
+      } 
     }
-    
+
     for (int i = 0; i <= cmdNum; i++) {
       for (int j = 0; j <= argIndex; j++) {
-        printf("%s\n", cmdBuff[cmdNum].argv[i]);
+        printf("%s\n", cmdBuff[cmdNum].argv[j]);
       }
     }
 
