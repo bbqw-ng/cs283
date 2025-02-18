@@ -84,17 +84,16 @@ int exec_local_cmd_loop()
       }
       printf("\n");
       continue;
-    }
-    
-    if (strcmp(cmd.argv[0], "cd") == 0) {
+    } else if (strcmp(cmd.argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
         if (chdir(cmd.argv[1]) != 0) 
           printf("Directory Not Found\n");
+      } else {
+        //change to home dir if no other args
+        chdir(getenv("HOME"));
       }
       continue;
-    }
-
-    if (strcmp(cmd.argv[0], "pwd") == 0) {
+    } else if (strcmp(cmd.argv[0], "pwd") == 0) {
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
@@ -102,7 +101,6 @@ int exec_local_cmd_loop()
       continue;
     }
 
-    //Fork and exec example one since ls is not a builtin
     if (strcmp(cmd.argv[0], "ls") == 0) {
       pid_t pid = fork();
         //inside child
@@ -129,6 +127,19 @@ int exec_local_cmd_loop()
         waitpid(pid, &childState, 0);
       } else {
         printf("forkignb had problem\n");
+      }
+      continue;
+    }
+
+    if (strcmp(cmd.argv[0], "uname") == 0) {
+      pid_t pid = fork();
+      if (pid == 0) {
+        execvp("uname", cmd.argv);
+      } else if (pid > 0) {
+        int childState;
+        waitpid(pid, &childState, 0);
+      } else {
+        printf("forking had a problem");
       }
       continue;
     }
