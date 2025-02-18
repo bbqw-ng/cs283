@@ -76,6 +76,15 @@ int exec_local_cmd_loop()
     } else if (buildCode == DRAGON) {
       printDragon();
     } 
+
+    if (strcmp(cmd.argv[0],"echo") == 0) {
+      //start at 1 because we want to ignore the "echo" inside of the argv
+      for(int i = 1; cmd.argv[i] != NULL; i++) {
+        printf("%s ", cmd.argv[i]);
+      }
+      printf("\n");
+      continue;
+    }
     
     if (strcmp(cmd.argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
