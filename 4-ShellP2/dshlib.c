@@ -53,29 +53,76 @@
  */
 int exec_local_cmd_loop()
 {
-  char *cmd_buff = malloc(SH_CMD_MAX);
+  char *cmdBuff = malloc(SH_CMD_MAX);
   int rc = 0;
   cmd_buff_t cmd;
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
   while(1) {
     printf("%s", SH_PROMPT);
-    if (fgets(cmd_buff, SH_CMD_MAX, stdin) == NULL) {
+    if (fgets(cmdBuff, SH_CMD_MAX, stdin) == NULL) {
       printf("\n");
       break;
     }
 
     //removing trailing space
-    cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
+    cmdBuff[strcspn(cmdBuff, "\n")] = '\0';
 
-    int buildCode = build_cmd_buff(cmd_buff, &cmd);
+    int buildCode = build_cmd_buff(cmdBuff, &cmd);
     if (buildCode == WARN_NO_CMDS) {
       continue;
     } else if (buildCode == OK_EXIT) {
       exit(0);
     } else if (buildCode == DRAGON) {
       printDragon();
-    } // other built-ins here
+    } 
+    
+    if (strcmp(cmd.argv[0], "cd") == 0) {
+      if (cmd.argv[1] != NULL) {
+        if (chdir(cmd.argv[1]) != 0) 
+          printf("Directory Not Found\n");
+      }
+      continue;
+    }
+
+    if (strcmp(cmd.argv[0], "pwd") == 0) {
+      //allocate space for the getcwd command
+      char cwd[DIRECTORY_LENGTH];
+      if (getcwd(cwd, sizeof(cwd)) != NULL) 
+        printf("%s\n", cwd);
+      continue;
+    }
+
+    //Fork and exec example one since ls is not a builtin
+    if (strcmp(cmd.argv[0], "ls") == 0) {
+      pid_t pid = fork();
+        //inside child
+      if (pid == 0) {
+        execvp("ls", cmd.argv);
+        //parents waiting for child
+      } else if (pid > 0) {
+        int childState;
+        waitpid(pid, &childState, 0);
+      } else {
+        printf("fork had a probme\n");
+      }
+      continue;
+    }
+
+    if (strcmp(cmd.argv[0], "which") == 0) {
+      pid_t pid = fork();
+      // pid = 0:" inside of child
+      if (pid == 0) {
+        execvp("which", cmd.argv);
+        // parent waiting for chilkd
+      } else if (pid > 0) {
+        int childState;
+        waitpid(pid, &childState, 0);
+      } else {
+        printf("forkignb had problem\n");
+      }
+      continue;
+    }
   }
 
     // TODO IMPLEMENT if built-in command, execute builtin logic for exit, cd (extra credit: dragon)
@@ -86,11 +133,11 @@ int exec_local_cmd_loop()
     // for example, if the user input is "ls -l", you would fork/exec the command "ls" with the arg "-l"
     // this on needs fork and exec?
     
-    free(cmd_buff);
+    free(cmdBuff);
     return OK;
 }
 
-int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
+int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd) {
   //Empty Command
   if (cmdLine == NULL || strlen(cmdLine) < 1)  {
     printf(CMD_WARN_NO_CMD);
@@ -98,7 +145,7 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   }
 
   //copy the original buff into the command
-  strcpy(cmdBuff->_cmd_buffer, cmdLine);
+  strcpy(cmd->_cmd_buffer, cmdLine);
 
   //Check cmdLine for length violation or violation of # of commands
   for (int i = 0, j = 0; *(cmdLine+i) != '\0'; i++) {
@@ -131,7 +178,9 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
     for (int i = 0; i <= trimmedOriginalLength; i++) { 
       if ( (*(trimmed+i) == ' ' && !quoteMode && i != trimmedOriginalLength)) {
         *(trimmed+i) = '\0';
-        cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+        //makes sure we don't add any extra spaces
+        if (start != trimmed+i)
+          cmd[cmdNum].argv[argIndex++] = strdup(start);
         start = trimmed+i+1;
 
       } else if (*(trimmed+i) == '\"' && !quoteMode) {
@@ -141,19 +190,19 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
       } else if (*(trimmed+i) == '\"' && quoteMode) {
         quoteMode = false;
         *(trimmed+i) = '\0';
-        cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
-        start = trimmed+i+2;
+        cmd[cmdNum].argv[argIndex++] = strdup(start);
+        start = trimmed+i+1;
       } 
     }
 
     //Adds the last argument into the argv for the command
     if (*start != '\0') {
-      cmdBuff[cmdNum].argv[argIndex++] = strdup(start);
+      cmd[cmdNum].argv[argIndex++] = strdup(start);
     }
 
     //null terminating the current string
-    cmdBuff[cmdNum].argv[argIndex] = NULL;
-    cmdBuff->argc = ++cmdNum;
+    cmd[cmdNum].argv[argIndex] = NULL;
+    cmd->argc = ++cmdNum;
 
     free(trimmed);
     trimmed = NULL;
@@ -162,11 +211,11 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmdBuff) {
   }
 
   //printing cmd for sanity check
-  printCmdBuff(cmdBuff);
+  //printCmdBuff(cmd);
 
-  if (strcmp(cmdBuff[0].argv[0], EXIT_CMD) == 0) 
+  if (strcmp(cmd[0].argv[0], EXIT_CMD) == 0) 
     return OK_EXIT;
-  else if (strcmp(cmdBuff[0].argv[0], "dragon") == 0)
+  else if (strcmp(cmd[0].argv[0], "dragon") == 0)
     return DRAGON;
 
   free(cmdCpy);
