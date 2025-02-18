@@ -59,6 +59,7 @@ int exec_local_cmd_loop()
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
   while(1) {
+
     printf("%s", SH_PROMPT);
     if (fgets(cmdBuff, SH_CMD_MAX, stdin) == NULL) {
       printf("\n");
@@ -68,14 +69,20 @@ int exec_local_cmd_loop()
     //removing trailing space
     cmdBuff[strcspn(cmdBuff, "\n")] = '\0';
 
-    int buildCode = build_cmd_buff(cmdBuff, &cmd);
-    if (buildCode == WARN_NO_CMDS) {
+    int buildReturn = build_cmd_buff(cmdBuff, &cmd);
+    if (buildReturn != OK) {
+      printf("Something went wrong with parsing the command.\n");
       continue;
-    } else if (buildCode == OK_EXIT) {
+    }
+
+    if (strcmp(cmd.argv[0], "exit") == 0) {
       exit(0);
-    } else if (buildCode == DRAGON) {
+    }
+
+    if (strcmp(cmd.argv[0], "dragon") == 0) {
       printDragon();
-    } 
+      continue;
+    }
 
     if (strcmp(cmd.argv[0],"echo") == 0) {
       //start at 1 because we want to ignore the "echo" inside of the argv
@@ -84,16 +91,21 @@ int exec_local_cmd_loop()
       }
       printf("\n");
       continue;
-    } else if (strcmp(cmd.argv[0], "cd") == 0) {
+    } 
+
+    if (strcmp(cmd.argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
         if (chdir(cmd.argv[1]) != 0) 
           printf("Directory Not Found\n");
       } else {
+        //does nothing at the moment - shell p.2
         //change to home dir if no other args
-        chdir(getenv("HOME"));
+        //chdir(getenv("HOME"));
       }
       continue;
-    } else if (strcmp(cmd.argv[0], "pwd") == 0) {
+    }
+
+    if (strcmp(cmd.argv[0], "pwd") == 0) {
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
@@ -145,16 +157,8 @@ int exec_local_cmd_loop()
     }
   }
 
-    // TODO IMPLEMENT if built-in command, execute builtin logic for exit, cd (extra credit: dragon)
-    // the cd command should chdir to the provided directory; if no directory is provided, do nothing
-    // so for the built-ins, we should just use exec without needing fork? 
-
-    // TODO IMPLEMENT if not built-in command, fork/exec as an external command
-    // for example, if the user input is "ls -l", you would fork/exec the command "ls" with the arg "-l"
-    // this on needs fork and exec?
-    
-    free(cmdBuff);
-    return OK;
+  free(cmdBuff);
+  return OK;
 }
 
 int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd) {
@@ -232,11 +236,6 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd) {
 
   //printing cmd for sanity check
   //printCmdBuff(cmd);
-
-  if (strcmp(cmd[0].argv[0], EXIT_CMD) == 0) 
-    return OK_EXIT;
-  else if (strcmp(cmd[0].argv[0], "dragon") == 0)
-    return DRAGON;
 
   free(cmdCpy);
   cmdCpy = NULL;
