@@ -91,6 +91,8 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
+      } else {
+        printf("Fork Failed");
       }
       continue;
     }
@@ -124,6 +126,8 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
+      } else {
+        printf("Fork Failed\n");
       }
       continue;
     }
@@ -137,7 +141,9 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
-      } 
+      } else {
+        printf("Fork Failed\n");
+      }
       continue;
     }
 
@@ -148,6 +154,8 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
+      } else {
+        printf("Fork Failed\n");
       }
       continue;
     }

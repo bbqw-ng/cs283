@@ -1,10 +1,10 @@
 1. Can you think of why we use `fork/execvp` instead of just calling `execvp` directly? What value do you think the `fork` provides?
 
-    > **Answer**:  _start here_
+    > **Answer**:  We use fork/execvp instead of just calling execvp directly, because with execvp, it would transform the current process into the executable which would then stop whatever else the process is doing and replcae it with whatver the command was. Fork is used to create another process to do execvp so you don't lose whatever was in your other process.
 
 2. What happens if the fork() system call fails? How does your implementation handle this scenario?
 
-    > **Answer**:  _start here_
+    > **Answer**:  If the fork() system call fails, then it should 
 
 3. How does execvp() find the command to execute? What system environment variable plays a role in this process?
 
