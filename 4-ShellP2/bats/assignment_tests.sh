@@ -25,7 +25,7 @@ EOF
     stripped_output=$(echo "$output" | tr -d '[:space:]')
 
     # Expected output with all whitespace removed for easier matching
-    expected_output="/tmp/dsh-testdsh2>dsh2>dsh2>cmdloopreturned0"
+    expected_output="dsh2>dsh2>/tmp/dsh-testdsh2>cmdloopreturned0"
 
     # These echo commands will help with debugging and will only print
     #if the test fails
@@ -56,7 +56,7 @@ EOF
     stripped_output=$(echo "$output" | tr -d '[:space:]')
 
     # Expected output with all whitespace removed for easier matching
-    expected_output="/tmpdsh2>dsh2>dsh2>cmdloopreturned0"
+    expected_output="dsh2>dsh2>/tmpdsh2>cmdloopreturned0"
 
     # These echo commands will help with debugging and will only print
     #if the test fails

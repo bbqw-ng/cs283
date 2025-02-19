@@ -14,6 +14,9 @@ EOF
     stripped_output=$(echo "$output" | tr -d '[:space:]')
 
     # Expected output with all whitespace removed for easier matching
+    
+
+    ##KEEP IN MIND THIS MIGHT BE DIFFERENT FOR YOURS, IT SHOULD JUST BE ALL OF THE FILES IN THE 4-SHELLP2 DIRECTORY THAT SHOW FROM ls
     expected_output="batsdragon.cdshdsh_cli.cdshlib.cdshlib.hmakefilequestions.mddsh2>dsh2>cmdloopreturned0"
 
     # These echo commands will help with debugging and will only print
