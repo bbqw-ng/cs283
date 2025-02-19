@@ -59,8 +59,8 @@ int exec_local_cmd_loop()
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
   while(1) {
-    //PROBLEM WHEN MAKING A BUILTIN COMMAND, IT PRINTS THE STDOUT STUFF LIKE PRINTF BUT WHEN FORKING IT PREINTS IT AFTERWARDS. TEST HAVE MISTAKE?
     printf("%s", SH_PROMPT);
+
     if (fgets(cmdBuff, SH_CMD_MAX, stdin) == NULL) {
       printf("\n");
       break;
@@ -85,13 +85,15 @@ int exec_local_cmd_loop()
     }
 
     if (strcmp(cmd.argv[0],"echo") == 0) {
-      //start at 1 because we want to ignore the "echo" inside of the argv
-      for(int i = 1; cmd.argv[i] != NULL; i++) {
-        printf("%s ", cmd.argv[i]);
+      pid_t pid = fork();
+      if (pid == 0) {
+        execvp("echo", cmd.argv);
+      } else if (pid > 0) {
+        int childState;
+        waitpid(pid, &childState, 0);
       }
-      printf("\n");
       continue;
-    } 
+    }
 
     if (strcmp(cmd.argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
@@ -109,7 +111,7 @@ int exec_local_cmd_loop()
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
-        printf("%s\n", cwd);
+        printf("%s", cwd);
       continue;
     }
 
@@ -150,7 +152,6 @@ int exec_local_cmd_loop()
       continue;
     }
   }
-
   free(cmdBuff);
   return OK;
 }
