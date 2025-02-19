@@ -113,7 +113,7 @@ int exec_local_cmd_loop()
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
-        printf("%s", cwd);
+        printf("%s\n", cwd);
       continue;
     }
 
