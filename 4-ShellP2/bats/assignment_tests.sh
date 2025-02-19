@@ -16,7 +16,7 @@
     cd /tmp
     mkdir -p dsh-test
 
-    run "${current}/dsh" <<EOF                
+    run "${current}/dsh" <<EOF
 cd dsh-test
 pwd
 EOF

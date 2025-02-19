@@ -59,7 +59,7 @@ int exec_local_cmd_loop()
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
   while(1) {
-
+    //PROBLEM WHEN MAKING A BUILTIN COMMAND, IT PRINTS THE STDOUT STUFF LIKE PRINTF BUT WHEN FORKING IT PREINTS IT AFTERWARDS. TEST HAVE MISTAKE?
     printf("%s", SH_PROMPT);
     if (fgets(cmdBuff, SH_CMD_MAX, stdin) == NULL) {
       printf("\n");
@@ -122,8 +122,6 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
-      } else {
-        printf("fork had a probme\n");
       }
       continue;
     }
@@ -137,9 +135,7 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
-      } else {
-        printf("forkignb had problem\n");
-      }
+      } 
       continue;
     }
 
@@ -150,8 +146,6 @@ int exec_local_cmd_loop()
       } else if (pid > 0) {
         int childState;
         waitpid(pid, &childState, 0);
-      } else {
-        printf("forking had a problem");
       }
       continue;
     }
