@@ -143,8 +143,9 @@ EOF
     rm -rf /tmp/rocksolid
     cd /tmp
     mkdir rocksolid
-    run "${current}/dsh" <<EOF                
-cd rocksolid
+    cd ${current}
+    run ./dsh <<EOF                
+cd /tmp/rocksolid
 pwd
 EOF
  
