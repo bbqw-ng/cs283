@@ -100,7 +100,7 @@ int exec_local_cmd_loop()
         printf("%s\n", cwd);
       continue;
     } else {
-      execute_pipeline(commandList);
+      //execute_pipeline(commandList);
     }
   }
   free(cmdBuff);
@@ -145,7 +145,6 @@ int execute_pipeline(command_list_t *commandList) {
 
       //execution time
       execvp(commandList->commands[i].argv[0], commandList->commands[i].argv);
-      perror("This command does not exist");
       return ERR_EXEC_CMD;
     } else if (pids[0] < 0) {
       perror("fork error");
@@ -176,9 +175,11 @@ int build_cmd_list(command_list_t *commandList, cmd_buff_t *cmdBuff) {
 }
 
 void printCmdList(command_list_t *commandList) {
-  for (int i = 0; i < commandList->num; i++) {
+  for (int i = 0; i <= commandList->num; i++) {
+    printf("\n");
+    printf("command #%d: ", i);
     for (int j = 0; commandList->commands[i].argv[j] != NULL; j++) 
-      printf("%s\n", commandList->commands[i].argv[j]);
+      printf("%s ", commandList->commands[i].argv[j]);
   }
 }
 
