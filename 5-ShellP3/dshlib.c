@@ -74,39 +74,18 @@ int exec_local_cmd_loop()
     int buildReturn = build_cmd_buff(cmdBuff, &cmd);
     printCmdBuff(&cmd);
 
-    printf("Before List Build\n");
     int buildCmdListReturn = build_cmd_list(commandList, &cmd);
-    printf("After List Build\n");
     printCmdList(commandList);
 
     if (buildReturn != OK || buildCmdListReturn != OK) {
       printf("Something went wrong with parsing the command.\n");
       continue;
-    }
-
-    if (strcmp(cmd.argv[0], "exit") == 0) {
+    } else if (strcmp(cmd.argv[0], "exit") == 0) {
       exit(0);
-    }
-
-    if (strcmp(cmd.argv[0], "dragon") == 0) {
+    } else if (strcmp(cmd.argv[0], "dragon") == 0) {
       printDragon();
       continue;
-    }
-
-    if (strcmp(cmd.argv[0],"echo") == 0) {
-      pid_t pid = fork();
-      if (pid == 0) {
-        execvp("echo", cmd.argv);
-      } else if (pid > 0) {
-        int childState;
-        waitpid(pid, &childState, 0);
-      } else {
-        printf("Fork Failed");
-      }
-      continue;
-    }
-
-    if (strcmp(cmd.argv[0], "cd") == 0) {
+    } else if (strcmp(cmd.argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
         if (chdir(cmd.argv[1]) != 0) 
           printf("Directory Not Found\n");
@@ -114,61 +93,15 @@ int exec_local_cmd_loop()
         chdir(getenv("HOME"));
       }
       continue;
-    }
-
-    if (strcmp(cmd.argv[0], "pwd") == 0) {
+    } else if (strcmp(cmd.argv[0], "pwd") == 0) {
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
         printf("%s\n", cwd);
       continue;
+    } else {
+      execute_pipeline(commandList);
     }
-
-    execute_pipeline(commandList);
-/*
-    if (strcmp(cmd.argv[0], "ls") == 0) {
-      pid_t pid = fork();
-        //inside child
-      if (pid == 0) {
-        execvp("ls", cmd.argv);
-        //parents waiting for child
-      } else if (pid > 0) {
-        int childState;
-        waitpid(pid, &childState, 0);
-      } else {
-        printf("Fork Failed\n");
-      }
-      continue;
-    }
-
-    if (strcmp(cmd.argv[0], "which") == 0) {
-      pid_t pid = fork();
-      // pid = 0:" inside of child
-      if (pid == 0) {
-        execvp("which", cmd.argv);
-        // parent waiting for chilkd
-      } else if (pid > 0) {
-        int childState;
-        waitpid(pid, &childState, 0);
-      } else {
-        printf("Fork Failed\n");
-      }
-      continue;
-    }
-
-    if (strcmp(cmd.argv[0], "uname") == 0) {
-      pid_t pid = fork();
-      if (pid == 0) {
-        execvp("uname", cmd.argv);
-      } else if (pid > 0) {
-        int childState;
-        waitpid(pid, &childState, 0);
-      } else {
-        printf("Fork Failed\n");
-      }
-      continue;
-    }
-    */
   }
   free(cmdBuff);
   cmdBuff = NULL;
@@ -180,7 +113,7 @@ int exec_local_cmd_loop()
 int execute_pipeline(command_list_t *commandList) {
   int numberOfCmds = commandList->num;
   //remember pipe has stdin stdout stderr so [0,1,2]
-  int pipes[numberOfCmds][2];
+  int pipes[numberOfCmds-1][2];
   //keep track of the pids
   pid_t pids[numberOfCmds];
   for (int i = 0; i < numberOfCmds; i++) {
@@ -212,10 +145,20 @@ int execute_pipeline(command_list_t *commandList) {
 
       //execution time
       execvp(commandList->commands[i].argv[0], commandList->commands[i].argv);
+      perror("This command does not exist");
+      return ERR_EXEC_CMD;
     } else if (pids[0] < 0) {
-      printf("fork error");
+      perror("fork error");
+      return ERR_EXEC_CMD;
     }
   }
+
+  //closing the rest of the descriptors since we already have what we needed
+  for(int i = 0; i< numberOfCmds - 1; i++) {
+    close(pipes[i][0]);
+    close(pipes[i][1]);
+  }
+
   for (int i = 0; i < numberOfCmds; i++) {
     waitpid(pids[i],NULL,0);
   }
