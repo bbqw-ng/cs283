@@ -58,6 +58,8 @@ int exec_local_cmd_loop()
   cmd_buff_t cmd;
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
 
+  command_list_t *commandList = malloc(sizeof(command_list_t));
+
   while(1) {
     printf("%s", SH_PROMPT);
 
@@ -70,7 +72,14 @@ int exec_local_cmd_loop()
     cmdBuff[strcspn(cmdBuff, "\n")] = '\0';
 
     int buildReturn = build_cmd_buff(cmdBuff, &cmd);
-    if (buildReturn != OK) {
+    printCmdBuff(&cmd);
+
+    printf("Before List Build\n");
+    int buildCmdListReturn = build_cmd_list(commandList, &cmd);
+    printf("After List Build\n");
+    printCmdList(commandList);
+
+    if (buildReturn != OK || buildCmdListReturn != OK) {
       printf("Something went wrong with parsing the command.\n");
       continue;
     }
@@ -102,9 +111,7 @@ int exec_local_cmd_loop()
         if (chdir(cmd.argv[1]) != 0) 
           printf("Directory Not Found\n");
       } else {
-        //does nothing at the moment - shell p.2
-        //change to home dir if no other args
-        //chdir(getenv("HOME"));
+        chdir(getenv("HOME"));
       }
       continue;
     }
@@ -117,6 +124,8 @@ int exec_local_cmd_loop()
       continue;
     }
 
+    execute_pipeline(commandList);
+/*
     if (strcmp(cmd.argv[0], "ls") == 0) {
       pid_t pid = fork();
         //inside child
@@ -159,9 +168,75 @@ int exec_local_cmd_loop()
       }
       continue;
     }
+    */
   }
   free(cmdBuff);
+  cmdBuff = NULL;
+  free(commandList);
+  commandList = NULL;
   return OK;
+}
+
+int execute_pipeline(command_list_t *commandList) {
+  int numberOfCmds = commandList->num;
+  //remember pipe has stdin stdout stderr so [0,1,2]
+  int pipes[numberOfCmds][2];
+  //keep track of the pids
+  pid_t pids[numberOfCmds];
+  for (int i = 0; i < numberOfCmds; i++) {
+    //we always want 1 less pipe than the number of commands we have.
+    if (i < numberOfCmds - 1) {
+      //pipe errors
+      if (pipe(pipes[i]) == -1) {
+        printf("Something went wrong with piping\n");
+        return ERR_EXEC_CMD;
+      }
+    }
+
+    //fork for the i'th slot
+    pids[i] = fork();
+    
+    //if child process num inside should be 0.
+    if (pids[i] == 0) {
+      //if i is not "0", that means it is not the first command and is waiting for the process before's stdout to match to current process stdin
+      if (i > 0)
+        dup2(pipes[i-1][0], STDIN_FILENO);
+      if (i < numberOfCmds) {
+        dup2(pipes[i][1], STDOUT_FILENO);
+      }
+      //now we no longer need the original file descriptroes so we get just close them up.
+      for(int j = 0; j < numberOfCmds; j++) {
+        close(pipes[j][0]);
+        close(pipes[j][1]);
+      }
+
+      //execution time
+      execvp(commandList->commands[i].argv[0], commandList->commands[i].argv);
+    } else if (pids[0] < 0) {
+      printf("fork error");
+    }
+  }
+  for (int i = 0; i < numberOfCmds; i++) {
+    waitpid(pids[i],NULL,0);
+  }
+  return OK;
+}
+
+int build_cmd_list(command_list_t *commandList, cmd_buff_t *cmdBuff) {
+  commandList->num = cmdBuff->argc;
+  for (int i = 0; i < cmdBuff->argc ;i++) {
+    for (int j = 0; cmdBuff[i].argv[j] != NULL; j++) {
+      commandList->commands[i] = cmdBuff[i];
+    }
+  }
+  return OK;
+}
+
+void printCmdList(command_list_t *commandList) {
+  for (int i = 0; i < commandList->num; i++) {
+    for (int j = 0; commandList->commands[i].argv[j] != NULL; j++) 
+      printf("%s\n", commandList->commands[i].argv[j]);
+  }
 }
 
 int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd) {

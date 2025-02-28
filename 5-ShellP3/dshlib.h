@@ -67,12 +67,13 @@ int free_cmd_buff(cmd_buff_t *cmd_buff);
 int clear_cmd_buff(cmd_buff_t *cmd_buff);
 int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff);
 int close_cmd_buff(cmd_buff_t *cmd_buff);
-int build_cmd_list(char *cmd_line, command_list_t *clist);
+int build_cmd_list(command_list_t *clist, cmd_buff_t *cmd_buff);
 int free_cmd_list(command_list_t *cmd_lst);
 char *rightTrim(char *cmd);
 char *leftTrim(char *cmd);
 void commandSplitter(char *cmd, cmd_buff_t *cmdBuff, int cmdNum);
 void printCmdBuff(cmd_buff_t *cmdBuff);
+void printCmdList(command_list_t *cmdList);
 void printDragon();
 
 //built in command stuff
