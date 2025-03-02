@@ -65,7 +65,7 @@ typedef struct command_list{
 int alloc_cmd_buff(cmd_buff_t *cmd_buff);
 int free_cmd_buff(cmd_buff_t *cmd_buff);
 int clear_cmd_buff(cmd_buff_t *cmd_buff);
-int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff);
+int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff, command_list_t *cmd_list);
 int close_cmd_buff(cmd_buff_t *cmd_buff);
 int build_cmd_list(command_list_t *clist, cmd_buff_t *cmd_buff);
 int free_cmd_list(command_list_t *cmd_lst);
