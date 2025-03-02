@@ -54,14 +54,15 @@ int exec_local_cmd_loop()
       continue;
     }
 
-    printCmdList(cmdList);
+    //print cmd list to double check
+    //printCmdList(cmdList);
 
-    if (strcmp(cmd.argv[0], "exit") == 0) {
+    if (strcmp(cmdList->commands->argv[0], "exit") == 0) {
       exit(0);
-    } else if (strcmp(cmd.argv[0], "dragon") == 0) {
+    } else if (strcmp(cmdList->commands->argv[0], "dragon") == 0) {
       printDragon();
       continue;
-    } else if (strcmp(cmd.argv[0], "cd") == 0) {
+    } else if (strcmp(cmdList->commands->argv[0], "cd") == 0) {
       if (cmd.argv[1] != NULL) {
         if (chdir(cmd.argv[1]) != 0) 
           printf("Directory Not Found\n");
@@ -69,74 +70,67 @@ int exec_local_cmd_loop()
         chdir(getenv("HOME"));
       }
       continue;
-    } else if (strcmp(cmd.argv[0], "pwd") == 0) {
+    } else if (strcmp(cmdList->commands->argv[0], "pwd") == 0) {
       //allocate space for the getcwd command
       char cwd[DIRECTORY_LENGTH];
       if (getcwd(cwd, sizeof(cwd)) != NULL) 
         printf("%s\n", cwd);
       continue;
     } else {
-      printf("got here");
       execute_pipeline(cmdList);
       continue;
     }
   }
+  //free cmdList
   free(cmdBuff);
   return OK;
 }
 
 int execute_pipeline(command_list_t *cmdList) {
-  int numberOfCmds = cmdList->num;
-  //remember pipe has stdin stdout stderr so [0,1,2]
-  int pipes[numberOfCmds-1][2];
-  //keep track of the pids
-  pid_t pids[numberOfCmds];
-  for (int i = 0; i < numberOfCmds; i++) {
-    //we always want 1 less pipe than the number of commands we have.
-    if (i < numberOfCmds - 1) {
-      //pipe errors
-      if (pipe(pipes[i]) == -1) {
-        printf("Something went wrong with piping\n");
-        return ERR_EXEC_CMD;
+    int numberOfCmds = cmdList->num + 1;
+    int pipes[numberOfCmds - 1][2];
+    pid_t pids[numberOfCmds];
+
+    for (int i = 0; i < numberOfCmds - 1; i++) {
+        if (pipe(pipes[i]) == -1) {
+            perror("pipe failed");
+            return ERR_EXEC_CMD;
+        }
+    }
+
+    for (int i = 0; i < numberOfCmds; i++) {
+      pids[i] = fork();
+
+      if (pids[i] == 0) { 
+        if (i > 0) {
+            dup2(pipes[i - 1][0], STDIN_FILENO);
+        }
+        if (i < numberOfCmds - 1) {
+            dup2(pipes[i][1], STDOUT_FILENO);
+        }
+        for (int j = 0; j < numberOfCmds - 1; j++) {
+            close(pipes[j][0]);
+            close(pipes[j][1]);
+        }
+        if (execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv) == -1) {
+          perror("execvp failed");
+          exit(ERR_EXEC_CMD);
+        }
+      } else if (pids[i] < 0) {
+          perror("fork failed");
+          return ERR_EXEC_CMD;
       }
     }
 
-    //fork for the i'th slot
-    pids[i] = fork();
-    
-    //if child process num inside should be 0.
-    if (pids[i] == 0) {
-      //if i is not "0", that means it is not the first command and is waiting for the process before's stdout to match to current process stdin
-      if (i > 0)
-        dup2(pipes[i-1][0], STDIN_FILENO);
-      if (i < numberOfCmds - 1) {
-        dup2(pipes[i][1], STDOUT_FILENO);
-      }
-      //now we no longer need the original file descriptroes so we get just close them up.
-      for(int j = 0; j < numberOfCmds - 1; j++) {
-        close(pipes[j][0]);
-        close(pipes[j][1]);
-      }
-
-      //execution time
-      execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv);
-      return ERR_EXEC_CMD;
-    } else if (pids[0] < 0) {
-      perror("fork error");
-      return ERR_EXEC_CMD;
+    for (int i = 0; i < numberOfCmds - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
     }
-  }
+    for (int i = 0; i < numberOfCmds; i++) {
+        waitpid(pids[i], NULL, 0);
+    }
 
-  //closing the rest of the descriptors since we already have what we needed
-  for(int i = 0; i< numberOfCmds - 1; i++) {
-    close(pipes[i][0]);
-    close(pipes[i][1]);
-  }
-
-  for (int i = 0; i < numberOfCmds; i++) {
-    waitpid(pids[i],NULL,0);
-  }
-  return OK;
+    return OK;
 }
 
 int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd, command_list_t *cmdList) {
@@ -206,7 +200,6 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd, command_list_t *cmdList) {
 
     //null terminating the current string
     cmd[cmdNum].argv[argIndex] = NULL;
-    printf("%d\n", argCount);
     cmd->argc = ++argCount;
   
 
