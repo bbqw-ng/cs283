@@ -88,7 +88,7 @@ int execute_pipeline(command_list_t *cmdList) {
   int pipes[numberOfCmds - 1][2];
   pid_t pids[numberOfCmds];
 
-  // Create pipes
+  //creating pipes for the # of commands
   for (int i = 0; i < numberOfCmds - 1; i++) {
     if (pipe(pipes[i]) == -1) {
       printf("piping operation failed\n");
@@ -103,37 +103,31 @@ int execute_pipeline(command_list_t *cmdList) {
   for (int i = 0; i < numberOfCmds; i++) {
     pids[i] = fork();
 
-    if (pids[i] == 0) {  // Child process
-      // If not the first command, set stdin to the previous pipe read end
+    //if you are the child process run this.
+    if (pids[i] == 0) { 
       if (i > 0) {
         dup2(pipes[i - 1][0], STDIN_FILENO);
-      }
-
-      // If not the last command, set stdout to the current pipe write end
+      } 
       if (i < numberOfCmds - 1) {
         dup2(pipes[i][1], STDOUT_FILENO);
       }
-
-      // Close all pipes in the child
       for (int j = 0; j < numberOfCmds - 1; j++) {
         close(pipes[j][0]);
         close(pipes[j][1]);
       }
-
-      // Execute command
       if (execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv) == -1) {
         perror("brian shell");
         exit(ERR_EXEC_CMD);
       }
     } 
-    //if fork fails
+    //if fork fails (aka not the child)
     else if (pids[i] < 0) { 
       printf("fork failed to properly execute\n");
       return ERR_EXEC_CMD;
     }
   }
 
-  //close all the file descriptors to avoid any errors with future iteratiosn
+  //close all the file descriptors to avoid any errors with things like zombie processes, etc etc
   for (int i = 0; i < numberOfCmds - 1; i++) {
     close(pipes[i][0]);
     close(pipes[i][1]);
@@ -181,9 +175,11 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd, command_list_t *cmdList) {
     char *start = trimmed;
     int argIndex = 0;
 
+    //initializes current singular command with 0 args first
     cmdList->commands[cmdNum].argc = 0;
 
     for (int i = 0; i <= trimmedLength; i++) { 
+      //handle non quotes and spaces
       if ((trimmed[i] == ' ' && !quoteMode) || trimmed[i] == '\0') {
         if (start != &trimmed[i]) {
           trimmed[i] = '\0';
@@ -191,6 +187,7 @@ int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd, command_list_t *cmdList) {
           cmdList->commands[cmdNum].argc++;
         }
         start = &trimmed[i + 1];
+        //handle quotataions
       } else if (trimmed[i] == '\"') {
         quoteMode = !quoteMode;
         if (!quoteMode)
