@@ -35,7 +35,7 @@ int exec_local_cmd_loop()
   int rc = 0;
   cmd_buff_t cmd;
   cmd._cmd_buffer = malloc(SH_CMD_MAX);
-  command_list_t *cmdList = malloc(sizeof(command_list_t));
+  command_list_t *cmdList = malloc((CMD_MAX) * sizeof(command_t));
 
   while(1) {
     printf("%s", SH_PROMPT);
@@ -53,9 +53,6 @@ int exec_local_cmd_loop()
       printf("Something went wrong with parsing the command.\n");
       continue;
     }
-
-    //print cmd list to double check
-    //printCmdList(cmdList);
 
     if (strcmp(cmdList->commands->argv[0], "exit") == 0) {
       exit(0);
@@ -87,139 +84,132 @@ int exec_local_cmd_loop()
 }
 
 int execute_pipeline(command_list_t *cmdList) {
-    int numberOfCmds = cmdList->num + 1;
-    int pipes[numberOfCmds - 1][2];
-    pid_t pids[numberOfCmds];
+  int numberOfCmds = cmdList->num + 1;
+  int pipes[numberOfCmds - 1][2];
+  pid_t pids[numberOfCmds];
 
-    for (int i = 0; i < numberOfCmds - 1; i++) {
-        if (pipe(pipes[i]) == -1) {
-            perror("pipe failed");
-            return ERR_EXEC_CMD;
-        }
+  // Create pipes
+  for (int i = 0; i < numberOfCmds - 1; i++) {
+    if (pipe(pipes[i]) == -1) {
+      printf("piping operation failed\n");
+      return ERR_EXEC_CMD;
     }
+  }
 
-    printCmdList(cmdList);
+  //doble chekc the commands before piping begins to make sure that everything is intended.
+  //printCmdList(cmdList);
 
-    for (int i = 0; i < numberOfCmds; i++) {
-      pids[i] = fork();
+  // Fork processes
+  for (int i = 0; i < numberOfCmds; i++) {
+    pids[i] = fork();
 
-      if (pids[i] == 0) { 
-        if (i > 0) {
-            dup2(pipes[i - 1][0], STDIN_FILENO);
-        }
-        if (i < numberOfCmds - 1) {
-            dup2(pipes[i][1], STDOUT_FILENO);
-        }
-        for (int j = 0; j < numberOfCmds - 1; j++) {
-            close(pipes[j][0]);
-            close(pipes[j][1]);
-        }
-        if (execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv) == -1) {
-          printf("command not recognized, please enter a valid and known command\n");
-          return(ERR_EXEC_CMD);
-        }
-      } else if (pids[i] < 0) {
-          perror("fork failed");
-          return ERR_EXEC_CMD;
+    if (pids[i] == 0) {  // Child process
+      // If not the first command, set stdin to the previous pipe read end
+      if (i > 0) {
+        dup2(pipes[i - 1][0], STDIN_FILENO);
       }
-    }
-    /*
-    for (int i = 0; i < numberOfCmds - 1; i++) {
-        close(pipes[i][0]);
-        close(pipes[i][1]);
-    }
-    */
-    for (int i = 0; i < numberOfCmds; i++) {
-        waitpid(pids[i], NULL, 0);
-    }
 
-    return OK;
+      // If not the last command, set stdout to the current pipe write end
+      if (i < numberOfCmds - 1) {
+        dup2(pipes[i][1], STDOUT_FILENO);
+      }
+
+      // Close all pipes in the child
+      for (int j = 0; j < numberOfCmds - 1; j++) {
+        close(pipes[j][0]);
+        close(pipes[j][1]);
+      }
+
+      // Execute command
+      if (execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv) == -1) {
+        perror("brian shell");
+        exit(ERR_EXEC_CMD);
+      }
+    } 
+    //if fork fails
+    else if (pids[i] < 0) { 
+      printf("fork failed to properly execute\n");
+      return ERR_EXEC_CMD;
+    }
+  }
+
+  //close all the file descriptors to avoid any errors with future iteratiosn
+  for (int i = 0; i < numberOfCmds - 1; i++) {
+    close(pipes[i][0]);
+    close(pipes[i][1]);
+  }
+
+  //wait for all the children to finish execution
+  for (int i = 0; i < numberOfCmds; i++) {
+    waitpid(pids[i], NULL, 0);
+  }
+
+  return OK;
 }
 
 int build_cmd_buff(char *cmdLine, cmd_buff_t *cmd, command_list_t *cmdList) {
-  //Empty Command
-  if (cmdLine == NULL || strlen(cmdLine) < 1)  {
+  if (cmdLine == NULL || strlen(cmdLine) < 1) {
     printf(CMD_WARN_NO_CMD);
     return WARN_NO_CMDS;
   }
 
-  //copy the original buff into the command
   strcpy(cmd->_cmd_buffer, cmdLine);
 
-  //Check cmdLine for length violation or violation of # of commands
-  for (int i = 0, j = 0; *(cmdLine+i) != '\0'; i++) {
-    if (*(cmdLine+i) == PIPE_CHAR) 
-      ++j;
-    if (j > 7) 
+  //checking for any pipe overflows, (invlaid commands)
+  int pipeCount = 0;
+  for (int i = 0; cmdLine[i] != '\0'; i++) {
+    if (cmdLine[i] == PIPE_CHAR)
+      pipeCount++;
+    if (pipeCount > 7)
       return ERR_TOO_MANY_COMMANDS;
-    if (i > ARG_MAX) 
+    if (i > ARG_MAX)
       return ERR_CMD_OR_ARGS_TOO_BIG;
   }
 
-  const char *delim = PIPE_STRING;
+  char *delim = PIPE_STRING;
   char *cmdCpy = strdup(cmdLine);
   char *save;
-
   char *token = strtok_r(cmdCpy, delim, &save);
-  //Keep track of the number of total commands (different than args of a cmd)
+  
   int cmdNum = 0;
 
-  //Splits it by the pipe \ //
   while (token != NULL) {
     char *trimmed = strdup(rightTrim(leftTrim(token)));
-    int trimmedOriginalLength = strlen(trimmed);
+    int trimmedLength = strlen(trimmed);
 
     bool quoteMode = false;
     char *start = trimmed;
-    int argIndex = 0, argCount = 0;
+    int argIndex = 0;
 
-    //parsing the command between pipes ( command 1 | command 2 | command 3 ) each per iteration of while loop
-    for (int i = 0; i <= trimmedOriginalLength; i++) { 
-      if ( (*(trimmed+i) == ' ' && !quoteMode && i != trimmedOriginalLength)) {
-        *(trimmed+i) = '\0';
-        //makes sure we don't add any extra spaces
-        if (start != trimmed+i) {
-          cmd->argv[argIndex++] = strdup(start);
-          argCount++;
+    cmdList->commands[cmdNum].argc = 0;
+
+    for (int i = 0; i <= trimmedLength; i++) { 
+      if ((trimmed[i] == ' ' && !quoteMode) || trimmed[i] == '\0') {
+        if (start != &trimmed[i]) {
+          trimmed[i] = '\0';
+          cmdList->commands[cmdNum].argv[argIndex++] = strdup(start);
+          cmdList->commands[cmdNum].argc++;
         }
-        start = trimmed+i+1;
-
-      } else if (*(trimmed+i) == '\"' && !quoteMode) {
-        quoteMode = true;
-        start = trimmed+i+1;
-
-      } else if (*(trimmed+i) == '\"' && quoteMode) {
-        quoteMode = false;
-        *(trimmed+i) = '\0';
-        cmd->argv[argIndex++] = strdup(start);
-        start = trimmed+i+1;
-      } 
+        start = &trimmed[i + 1];
+      } else if (trimmed[i] == '\"') {
+        quoteMode = !quoteMode;
+        if (!quoteMode)
+          trimmed[i] = '\0';
+        else
+          start = &trimmed[i + 1];
+      }
     }
 
-    //Adds the last argument into the argv for the command
-    if (*start != '\0') {
-      cmd[cmdNum].argv[argIndex++] = strdup(start);
-    }
-
-    //null terminating the current string
-    cmd[cmdNum].argv[argIndex] = NULL;
-    cmd->argc = ++argCount;
-  
-
-    cmdList->num = cmdNum;
-    cmdList->commands[cmdNum++] = *cmd;
+    cmdList->commands[cmdNum].argv[argIndex] = NULL;
+    cmdNum++;
 
     free(trimmed);
-    trimmed = NULL;
-
     token = strtok_r(NULL, delim, &save);
   }
 
-  //printing cmd for sanity check
-  //printCmdBuff(cmd);
+  cmdList->num = cmdNum - 1;
 
   free(cmdCpy);
-  cmdCpy = NULL;
   return OK;
 }
 
@@ -239,8 +229,8 @@ char *rightTrim(char *cmd) {
 
 void printCmdBuff(cmd_buff_t *cmdBuff) {
   for (int i = 0; i < cmdBuff->argc ;i++) 
-    for (int j = 0; cmdBuff[i].argv[j] != NULL; j++) 
-      printf("%s\n", cmdBuff[i].argv[j]);
+    for (int j = 0; cmdBuff->argv[j] != NULL; j++) 
+      printf("%s\n", cmdBuff->argv[j]);
 }
 
 void printCmdList(command_list_t *cmdList) {
@@ -250,11 +240,4 @@ void printCmdList(command_list_t *cmdList) {
     }
   }
 }
-
-
-
-
-
-
-
 
