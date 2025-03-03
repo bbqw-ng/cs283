@@ -84,12 +84,12 @@ int exec_local_cmd_loop()
 }
 
 int execute_pipeline(command_list_t *cmdList) {
-  int numberOfCmds = cmdList->num + 1;
-  int pipes[numberOfCmds - 1][2];
-  pid_t pids[numberOfCmds];
+  int numOfCommands = cmdList->num + 1;
+  int pipes[numOfCommands - 1][2];
+  pid_t pids[numOfCommands];
 
   //creating pipes for the # of commands
-  for (int i = 0; i < numberOfCmds - 1; i++) {
+  for (int i = 0; i < numOfCommands - 1; i++) {
     if (pipe(pipes[i]) == -1) {
       printf("piping operation failed\n");
       return ERR_EXEC_CMD;
@@ -100,7 +100,7 @@ int execute_pipeline(command_list_t *cmdList) {
   //printCmdList(cmdList);
 
   // Fork processes
-  for (int i = 0; i < numberOfCmds; i++) {
+  for (int i = 0; i < numOfCommands; i++) {
     pids[i] = fork();
 
     //if you are the child process run this.
@@ -108,10 +108,10 @@ int execute_pipeline(command_list_t *cmdList) {
       if (i > 0) {
         dup2(pipes[i - 1][0], STDIN_FILENO);
       } 
-      if (i < numberOfCmds - 1) {
+      if (i < numOfCommands - 1) {
         dup2(pipes[i][1], STDOUT_FILENO);
       }
-      for (int j = 0; j < numberOfCmds - 1; j++) {
+      for (int j = 0; j < numOfCommands - 1; j++) {
         close(pipes[j][0]);
         close(pipes[j][1]);
       }
@@ -128,13 +128,13 @@ int execute_pipeline(command_list_t *cmdList) {
   }
 
   //close all the file descriptors to avoid any errors with things like zombie processes, etc etc
-  for (int i = 0; i < numberOfCmds - 1; i++) {
+  for (int i = 0; i < numOfCommands - 1; i++) {
     close(pipes[i][0]);
     close(pipes[i][1]);
   }
 
   //wait for all the children to finish execution
-  for (int i = 0; i < numberOfCmds; i++) {
+  for (int i = 0; i < numOfCommands; i++) {
     waitpid(pids[i], NULL, 0);
   }
 
