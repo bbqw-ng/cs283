@@ -98,6 +98,8 @@ int execute_pipeline(command_list_t *cmdList) {
         }
     }
 
+    printCmdList(cmdList);
+
     for (int i = 0; i < numberOfCmds; i++) {
       pids[i] = fork();
 
@@ -113,19 +115,20 @@ int execute_pipeline(command_list_t *cmdList) {
             close(pipes[j][1]);
         }
         if (execvp(cmdList->commands[i].argv[0], cmdList->commands[i].argv) == -1) {
-          perror("execvp failed");
-          exit(ERR_EXEC_CMD);
+          printf("command not recognized, please enter a valid and known command\n");
+          return(ERR_EXEC_CMD);
         }
       } else if (pids[i] < 0) {
           perror("fork failed");
           return ERR_EXEC_CMD;
       }
     }
-
+    /*
     for (int i = 0; i < numberOfCmds - 1; i++) {
         close(pipes[i][0]);
         close(pipes[i][1]);
     }
+    */
     for (int i = 0; i < numberOfCmds; i++) {
         waitpid(pids[i], NULL, 0);
     }
