@@ -99,15 +99,17 @@ int execute_pipeline(command_list_t *cmdList) {
   //doble chekc the commands before piping begins to make sure that everything is intended.
   //printCmdList(cmdList);
 
-  // Fork processes
+  //fork processes
   for (int i = 0; i < numOfCommands; i++) {
     pids[i] = fork();
 
     //if you are the child process run this.
     if (pids[i] == 0) { 
+      //not first cmd
       if (i > 0) {
         dup2(pipes[i - 1][0], STDIN_FILENO);
       } 
+      //if not last cmd
       if (i < numOfCommands - 1) {
         dup2(pipes[i][1], STDOUT_FILENO);
       }
