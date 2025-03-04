@@ -4,9 +4,10 @@
 # 
 # Create your unit tests suit in this file
 
-@test "Example: check ls runs without errors" {
-    run ./dsh <<EOF                
-ls
+@test "ls | grep \".c\"" {
+    run ./dsh <<EOF             
+ls | grep ".c"
+
 EOF
 
     # Assertions
