@@ -93,30 +93,63 @@
 int exec_remote_cmd_loop(char *address, int port)
 {
     char *cmd_buff;
+    cmd_buff = malloc(RDSH_COMM_BUFF_SZ);
     char *rsp_buff;
+    rsp_buff = malloc(RDSH_COMM_BUFF_SZ);
     int cli_socket;
-    ssize_t io_size;
-    int is_eof;
-
+    start_client(address, port);
+    if (cli_socket < 0) {
+      perror("socket error");
+      return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
+    }
     // TODO set up cmd and response buffs
 
-    cli_socket = start_client(address,port);
+    cli_socket = start_client(address, port);
     if (cli_socket < 0){
-        perror("start client");
+        perror("client failure");
         return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
     }
 
     while (1) 
     {
         // TODO print prompt
-
+      printf("rsh> ");
         // TODO fgets input
-
+      if (!fgets(cmd_buff, RDSH_COMM_BUFF_SZ, stdin)) {
+        break;
+      }
+      int commandLength = strlen(cmd_buff);
+      if (commandLength > 0 && cmd_buff[commandLength-1] == '\n') {
+        cmd_buff[commandLength-1] = '\0';
+      }
         // TODO send() over cli_socket
-
+      if (send(cli_socket, cmd_buff, commandLength+1, 0) < 0) {
+        perror("sending failed");
+        return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
+      }
         // TODO recv all the results
+      int receivedBytes;
+      int is_eof;
+      receivedBytes = recv(cli_socket, rsp_buff, RDSH_COMM_BUFF_SZ, 0);
+      while(receivedBytes > 0) {
+        printf("%.*s", receivedBytes, rsp_buff);
+        //checks for eof.
+        if (rsp_buff[receivedBytes-1] == RDSH_EOF_CHAR) {
+          is_eof = 1;
+          break;
+        }
+      }
 
+      if (receivedBytes < 0) {
+        perror("recv failed");
+        return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_COMMUNICATION);
+      }
         // TODO break on exit command
+      if (strcmp(cmd_buff, "exit") == 0) {
+        break;
+      } else if (strcmp(cmd_buff, "stop-server") == 0) {
+        break;
+      }
     }
 
     return client_cleanup(cli_socket, cmd_buff, rsp_buff, OK);
