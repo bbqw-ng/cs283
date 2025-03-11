@@ -147,12 +147,28 @@ int exec_remote_cmd_loop(char *address, int port)
  */
 int start_client(char *server_ip, int port){
     struct sockaddr_in addr;
+    //create the client socket
     int cli_socket;
+    cli_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (cli_socket == -1) {
+      perror("socket");
+      exit(ERR_RDSH_CLIENT);
+    }
+
+    //connec tthe socket to the socket address
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_port = htons(port);
+
+    //sinuce we are on client side we need to "connect" instead of bind
     int ret;
+    ret = connect (cli_socket, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret < 1) {
+      fprintf(stderr, "The server is down.\n");
+      exit(ERR_RDSH_CLIENT);
+    }
 
-    // TODO set up cli_socket
-
-
+    //returns the socket's file descriptor
     return cli_socket;
 }
 
