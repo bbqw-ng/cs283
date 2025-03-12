@@ -97,11 +97,6 @@ int exec_remote_cmd_loop(char *address, int port)
     char *rsp_buff;
     rsp_buff = malloc(RDSH_COMM_BUFF_SZ);
     int cli_socket;
-    start_client(address, port);
-    if (cli_socket < 0) {
-      perror("socket error");
-      return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
-    }
     // TODO set up cmd and response buffs
 
     cli_socket = start_client(address, port);
@@ -123,6 +118,7 @@ int exec_remote_cmd_loop(char *address, int port)
         cmd_buff[commandLength-1] = '\0';
       }
         // TODO send() over cli_socket
+      printf("%s\n", cmd_buff);
       if (send(cli_socket, cmd_buff, commandLength+1, 0) < 0) {
         perror("sending failed");
         return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
@@ -190,13 +186,13 @@ int start_client(char *server_ip, int port){
 
     //connec tthe socket to the socket address
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.s_addr = inet_addr(server_ip);
     addr.sin_port = htons(port);
 
     //sinuce we are on client side we need to "connect" instead of bind
     int ret;
     ret = connect (cli_socket, (struct sockaddr *)&addr, sizeof(addr));
-    if (ret < 1) {
+    if (ret < 0) {
       fprintf(stderr, "The server is down.\n");
       exit(ERR_RDSH_CLIENT);
     }

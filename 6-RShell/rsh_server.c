@@ -200,7 +200,13 @@ int process_cli_requests(int svr_socket){
 
     while(1){
         // TODO use the accept syscall to create cli_socket 
+        cli_socket = accept(svr_socket, NULL, NULL);
+        if (cli_socket < 0) {
+          perror("accept");
+          exit(ERR_RDSH_SERVER);
+        }
         // and then exec_client_requests(cli_socket)
+        exec_client_requests(cli_socket);
     }
 
     stop_server(cli_socket);
@@ -251,9 +257,12 @@ int process_cli_requests(int svr_socket){
 int exec_client_requests(int cli_socket) {
     int io_size;
     command_list_t cmd_list;
+    cmd_buff_t cmd;
+    cmd._cmd_buffer = malloc(SH_CMD_MAX);
+
     int rc;
     int cmd_rc;
-    int last_rc;
+    //int last_rc;
     char *io_buff;
 
     io_buff = malloc(RDSH_COMM_BUFF_SZ);
@@ -263,20 +272,37 @@ int exec_client_requests(int cli_socket) {
 
     while(1) {
         // TODO use recv() syscall to get input
+        io_size = recv(cli_socket, io_buff, RDSH_COMM_BUFF_SZ-1,0);
+        printf("%s\n", io_buff);
+        if (io_size < 0) {
+          perror("problem with recv");
+          exit(ERR_RDSH_COMMUNICATION);
+        }
+        //making sure to terminate the buff since we dont want any random memory accesses
+        io_buff[io_size] = '\0';
 
         // TODO build up a cmd_list
-
+        rc = build_cmd_buff(io_buff, &cmd, &cmd_list);
+        printCmdList(&cmd_list);
+        if (rc != OK) {
+          send_message_string(cli_socket, "Bad commands\n");
+          continue;
+        }
         // TODO rsh_execute_pipeline to run your cmd_list
-
+        cmd_rc = rsh_execute_pipeline(cli_socket, &cmd_list);
+        send_message_string(cli_socket, "command got did\n");
         // TODO send appropriate respones with send_message_string
         // - error constants for failures
         // - buffer contents from execute commands
         //  - etc.
 
         // TODO send_message_eof when done
+        send_message_eof(cli_socket);
     }
 
-    return WARN_RDSH_NOT_IMPL;
+    free(io_buff);
+    free(cmd._cmd_buffer);
+    return OK;
 }
 
 /*
@@ -324,8 +350,19 @@ int send_message_eof(int cli_socket){
  *           we were unable to send the message followed by the EOF character. 
  */
 int send_message_string(int cli_socket, char *buff){
+  int totalBytesSent = 0;
+  int bytesSentSoFar;
+  int length = strlen(buff);
     //TODO implement writing to cli_socket with send()
-    return WARN_RDSH_NOT_IMPL;
+  while (totalBytesSent < length) {
+    bytesSentSoFar = send(cli_socket, buff+totalBytesSent, length-totalBytesSent,0);
+    if (bytesSentSoFar < 0) {
+      perror("something went wrong with sending");
+      return ERR_RDSH_SERVER;
+    }
+    totalBytesSent += bytesSentSoFar;
+  }
+  return OK;
 }
 
 
@@ -371,7 +408,6 @@ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
     int pipes[clist->num - 1][2];  // Array of pipes
     pid_t pids[clist->num];
     int  pids_st[clist->num];         // Array to store process IDs
-    Built_In_Cmds bi_cmd;
     int exit_code;
 
     // Create all necessary pipes
@@ -384,9 +420,34 @@ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
 
     for (int i = 0; i < clist->num; i++) {
         // TODO this is basically the same as the piped fork/exec assignment, except for where you connect the begin and end of the pipeline (hint: cli_sock)
+      pids[i] = fork();
+      if (pids[i] == 0) {
+        if (i == 0) {
+          dup2(cli_sock, STDIN_FILENO);
+        } else {
+          dup2(pipes[i-1][0], STDIN_FILENO);
+        }
 
-        // TODO HINT you can dup2(cli_sock with STDIN_FILENO, STDOUT_FILENO, etc.
+        if (i == clist->num - 1) {
+          dup2(cli_sock, STDOUT_FILENO);
+        } else {
+          dup2(pipes[i][1], STDOUT_FILENO);
+        }
+        
+        for(int j = 0; j < clist->num; j++) {
+          close(pipes[j][0]);
+          close(pipes[j][1]);
+        }
 
+        int exec_rc = execvp(clist->commands[i].argv[0], clist->commands[i].argv);
+        if (exec_rc == -1) {
+          perror("pipeline ran bad");
+          exit(ERR_EXEC_CMD);
+        } 
+      } else if (pids[i] < 0) {
+        perror("something went wrong with forking");
+        return ERR_EXEC_CMD;
+      }
     }
 
 
