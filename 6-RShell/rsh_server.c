@@ -116,12 +116,29 @@ int stop_server(int svr_socket){
  */
 int boot_server(char *ifaces, int port){
     int svr_socket;
+    svr_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (svr_socket < 0) {
+      perror("socket");
+      exit(ERR_RDSH_SERVER);
+    }
+
     int ret;
     
     struct sockaddr_in addr;
 
     // TODO set up the socket - this is very similar to the demo code
+    int enable = 1;
+    setsockopt(svr_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(ifaces);
+    addr.sin_port = htons(port);
+
+    ret = bind(svr_socket, (const struct sockaddr *) &addr, sizeof(struct sockaddr_in));
+    if (ret == -1) {
+      perror("bind");
+      exit(ERR_RDSH_SERVER);
+    }
     /*
      * Prepare for accepting connections. The backlog size is set
      * to 20. So while one request is being processed other requests
