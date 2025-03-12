@@ -128,11 +128,15 @@ int exec_remote_cmd_loop(char *address, int port)
       int is_eof;
       receivedBytes = recv(cli_socket, rsp_buff, RDSH_COMM_BUFF_SZ, 0);
       while(receivedBytes > 0) {
-        printf("%.*s", receivedBytes, rsp_buff);
-        //checks for eof.
-        if (rsp_buff[receivedBytes-1] == RDSH_EOF_CHAR) {
-          is_eof = 1;
-          break;
+        if (strcmp(rsp_buff, "dragon") == 0) {
+          printDragon();
+        } else {
+          printf("%.*s", receivedBytes, rsp_buff);
+          //checks for eof.
+          if (rsp_buff[receivedBytes-1] == RDSH_EOF_CHAR) {
+            is_eof = 1;
+            break;
+          }
         }
       }
 
@@ -142,8 +146,6 @@ int exec_remote_cmd_loop(char *address, int port)
       }
         // TODO break on exit command
       if (strcmp(cmd_buff, "exit") == 0) {
-        break;
-      } else if (strcmp(cmd_buff, "stop-server") == 0) {
         break;
       }
     }

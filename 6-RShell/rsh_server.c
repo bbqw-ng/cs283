@@ -206,7 +206,10 @@ int process_cli_requests(int svr_socket){
           exit(ERR_RDSH_SERVER);
         }
         // and then exec_client_requests(cli_socket)
-        exec_client_requests(cli_socket);
+        rc = exec_client_requests(cli_socket);
+        if (rc == OK_EXIT) {
+          exit(OK_EXIT);
+        }
     }
 
     stop_server(cli_socket);
@@ -271,12 +274,16 @@ int exec_client_requests(int cli_socket) {
     }
 
     while(1) {
+        //reset it each time
+        memset(io_buff, 0, RDSH_COMM_BUFF_SZ);
         // TODO use recv() syscall to get input
         io_size = recv(cli_socket, io_buff, RDSH_COMM_BUFF_SZ-1,0);
         printf("%s\n", io_buff);
         if (io_size < 0) {
           perror("problem with recv");
-          exit(ERR_RDSH_COMMUNICATION);
+          break;
+        } else if (io_size == 0) {
+          break;
         }
         //making sure to terminate the buff since we dont want any random memory accesses
         io_buff[io_size] = '\0';
@@ -288,9 +295,34 @@ int exec_client_requests(int cli_socket) {
           send_message_string(cli_socket, "Bad commands\n");
           continue;
         }
-        // TODO rsh_execute_pipeline to run your cmd_list
-        cmd_rc = rsh_execute_pipeline(cli_socket, &cmd_list);
-        send_message_string(cli_socket, "command got did\n");
+        if (strcmp(cmd_list.commands->argv[0], "exit") == 0) {
+          send_message_eof(cli_socket);
+          break;
+        } else if (strcmp(cmd_list.commands->argv[0], "stop-server") == 0) {
+          send_message_eof(cli_socket);
+          free(io_buff);
+          free(cmd._cmd_buffer);
+          return OK_EXIT;
+        } else if (strcmp(cmd_list.commands->argv[0], "pwd") == 0) {
+          char cwd[DIRECTORY_LENGTH];
+          if (getcwd(cwd, sizeof(cwd)) != NULL) {
+            send_message_string(cli_socket, cwd);
+          }
+          continue;
+        } else if (strcmp(cmd_list.commands->argv[0], "cd") == 0) {
+          if (cmd_list.commands->argv[1] != NULL) {
+            if (chdir(cmd_list.commands->argv[1]) != 0) 
+              send_message_string(cli_socket, "Directory Changed");
+            } else {
+              chdir(getenv("HOME"));
+              send_message_string(cli_socket, "Directory Changed to Home");
+            }
+          continue;
+        } else {
+          cmd_rc = rsh_execute_pipeline(cli_socket, &cmd_list);
+          continue;
+        }
+
         // TODO send appropriate respones with send_message_string
         // - error constants for failures
         // - buffer contents from execute commands
