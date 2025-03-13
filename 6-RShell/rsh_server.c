@@ -278,7 +278,6 @@ int exec_client_requests(int cli_socket) {
         memset(io_buff, 0, RDSH_COMM_BUFF_SZ);
         // TODO use recv() syscall to get input
         io_size = recv(cli_socket, io_buff, RDSH_COMM_BUFF_SZ-1,0);
-        printf("%s\n", io_buff);
         if (io_size < 0) {
           perror("problem with recv");
           break;
@@ -290,7 +289,7 @@ int exec_client_requests(int cli_socket) {
 
         // TODO build up a cmd_list
         rc = build_cmd_buff(io_buff, &cmd, &cmd_list);
-        printCmdList(&cmd_list);
+        //printCmdList(&cmd_list);
         if (rc != OK) {
           send_message_string(cli_socket, "Bad commands\n");
           send_message_eof(cli_socket);
@@ -300,6 +299,7 @@ int exec_client_requests(int cli_socket) {
           send_message_eof(cli_socket);
           break;
         } else if (strcmp(cmd_list.commands->argv[0], "stop-server") == 0) {
+          send_message_string(cli_socket, "exit");
           send_message_eof(cli_socket);
           free(io_buff);
           free(cmd._cmd_buffer);
@@ -316,11 +316,15 @@ int exec_client_requests(int cli_socket) {
           if (cmd_list.commands->argv[1] != NULL) {
             if (chdir(cmd_list.commands->argv[1]) != 0) {
               send_message_string(cli_socket, "Directory Changed\n");
-            } else {
-              chdir(getenv("HOME"));
-              send_message_string(cli_socket, "Directory Changed to Home\n");
             }
+          } else {
+            chdir(getenv("HOME"));
+            send_message_string(cli_socket, "Directory Changed to Home\n");
           }
+          send_message_eof(cli_socket);
+          continue;
+        } else if (strcmp(cmd_list.commands->argv[0], "dragon") == 0) {
+          send_message_string(cli_socket, "dragon");
           send_message_eof(cli_socket);
           continue;
         } else {
@@ -443,36 +447,40 @@ int send_message_string(int cli_socket, char *buff){
  *                  get this value. 
  */
 int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
-    int pipes[clist->num - 1][2];  // Array of pipes
-    pid_t pids[clist->num];
-    int  pids_st[clist->num];         // Array to store process IDs
+    //my implementation has clist->num = 0 means there is 1 command. which means that to make it match with the actual num of commands, we add 1 to it.
+    int numOfCommands = clist->num + 1;
+    int pipes[numOfCommands - 1][2];  // Array of pipes
+    pid_t pids[numOfCommands];
+    int  pids_st[numOfCommands];         // Array to store process IDs
     int exit_code;
 
     // Create all necessary pipes
-    for (int i = 0; i < clist->num - 1; i++) {
+    for (int i = 0; i < numOfCommands - 1; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("pipe");
             exit(EXIT_FAILURE);
         }
     }
 
-    for (int i = 0; i < clist->num; i++) {
-        // TODO this is basically the same as the piped fork/exec assignment, except for where you connect the begin and end of the pipeline (hint: cli_sock)
+    for (int i = 0; i < numOfCommands; i++) {
       pids[i] = fork();
+        // TODO this is basically the same as the piped fork/exec assignment, except for where you connect the begin and end of the pipeline (hint: cli_sock)
+        //child process runs this
       if (pids[i] == 0) {
+        //if you are the first command, we want to reroute the stdin from cleint socket to server input socket)
         if (i == 0) {
           dup2(cli_sock, STDIN_FILENO);
         } else {
           dup2(pipes[i-1][0], STDIN_FILENO);
         }
 
-        if (i == clist->num - 1) {
+        if (i == numOfCommands-1) {
           dup2(cli_sock, STDOUT_FILENO);
         } else {
           dup2(pipes[i][1], STDOUT_FILENO);
         }
-        
-        for(int j = 0; j < clist->num; j++) {
+
+        for (int j = 0; j < numOfCommands - 1; j++) {
           if (j != i - 1) {
             close(pipes[j][0]);
           }
@@ -481,33 +489,32 @@ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
           }
         }
 
-        int exec_rc = execvp(clist->commands[i].argv[0], clist->commands[i].argv);
-        if (exec_rc == -1) {
-          perror("pipeline ran bad");
+        if (execvp(clist->commands[i].argv[0], clist->commands[i].argv) == -1) {
+          perror("something went wrong with executing command");
           exit(ERR_EXEC_CMD);
-        } 
+        }
       } else if (pids[i] < 0) {
-        perror("something went wrong with forking");
-        return ERR_EXEC_CMD;
+        perror("forking had a problem");
+        exit(ERR_EXEC_CMD);
       }
     }
 
 
     // Parent process: close all pipe ends
-    for (int i = 0; i < clist->num - 1; i++) {
+    for (int i = 0; i < numOfCommands; i++) {
         close(pipes[i][0]);
         close(pipes[i][1]);
     }
 
     // Wait for all children
-    for (int i = 0; i < clist->num; i++) {
+    for (int i = 0; i < numOfCommands; i++) {
         waitpid(pids[i], &pids_st[i], 0);
     }
 
     //by default get exit code of last process
     //use this as the return value
-    exit_code = WEXITSTATUS(pids_st[clist->num - 1]);
-    for (int i = 0; i < clist->num; i++) {
+    exit_code = WEXITSTATUS(pids_st[numOfCommands-1]);
+    for (int i = 0; i < numOfCommands; i++) {
         //if any commands in the pipeline are EXIT_SC
         //return that to enable the caller to react
         if (WEXITSTATUS(pids_st[i]) == EXIT_SC)
