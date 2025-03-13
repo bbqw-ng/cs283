@@ -293,6 +293,7 @@ int exec_client_requests(int cli_socket) {
         printCmdList(&cmd_list);
         if (rc != OK) {
           send_message_string(cli_socket, "Bad commands\n");
+          send_message_eof(cli_socket);
           continue;
         }
         if (strcmp(cmd_list.commands->argv[0], "exit") == 0) {
@@ -307,19 +308,24 @@ int exec_client_requests(int cli_socket) {
           char cwd[DIRECTORY_LENGTH];
           if (getcwd(cwd, sizeof(cwd)) != NULL) {
             send_message_string(cli_socket, cwd);
+            send_message_string(cli_socket, "\n");
           }
+          send_message_eof(cli_socket);
           continue;
         } else if (strcmp(cmd_list.commands->argv[0], "cd") == 0) {
           if (cmd_list.commands->argv[1] != NULL) {
-            if (chdir(cmd_list.commands->argv[1]) != 0) 
-              send_message_string(cli_socket, "Directory Changed");
+            if (chdir(cmd_list.commands->argv[1]) != 0) {
+              send_message_string(cli_socket, "Directory Changed\n");
             } else {
               chdir(getenv("HOME"));
-              send_message_string(cli_socket, "Directory Changed to Home");
+              send_message_string(cli_socket, "Directory Changed to Home\n");
             }
+          }
+          send_message_eof(cli_socket);
           continue;
         } else {
           cmd_rc = rsh_execute_pipeline(cli_socket, &cmd_list);
+          send_message_eof(cli_socket);
           continue;
         }
 
@@ -467,8 +473,12 @@ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
         }
         
         for(int j = 0; j < clist->num; j++) {
-          close(pipes[j][0]);
-          close(pipes[j][1]);
+          if (j != i - 1) {
+            close(pipes[j][0]);
+          }
+          if (j != i) {
+            close(pipes[j][1]);
+          }
         }
 
         int exec_rc = execvp(clist->commands[i].argv[0], clist->commands[i].argv);
