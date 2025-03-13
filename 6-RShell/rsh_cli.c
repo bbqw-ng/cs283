@@ -135,10 +135,8 @@ int exec_remote_cmd_loop(char *address, int port)
           return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_COMMUNICATION);
         } else if (strncmp(rsp_buff, "exit", 4) == 0) {
           return client_cleanup(cli_socket, cmd_buff, rsp_buff, OK);
-          //needed to add \0, since dragon.c would make this print out.
-        } else if (strncmp(rsp_buff, "dragon\0", 7) == 0) {
+        } else if (strncmp(rsp_buff, "printdragon", 11) == 0) {
           printDragon();
-          printf("%.*s", receivedBytes, rsp_buff);
         } else {
           printf("%.*s", receivedBytes, rsp_buff);
         }

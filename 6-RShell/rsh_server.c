@@ -324,7 +324,7 @@ int exec_client_requests(int cli_socket) {
           send_message_eof(cli_socket);
           continue;
         } else if (strcmp(cmd_list.commands->argv[0], "dragon") == 0) {
-          send_message_string(cli_socket, "dragon");
+          send_message_string(cli_socket, "printdragon");
           send_message_eof(cli_socket);
           continue;
         } else {
