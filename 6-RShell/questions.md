@@ -9,7 +9,7 @@ To find the end of a stream, again we want to use the null terminator to signify
 
 3. Describe the general differences between stateful and stateless protocols.
 
-stateless protocols do not worry about the status or "state" of another program, it is independent and all the data that is needed is given in the current interaction rather than data from previous interactions
+stateless protocols do not worry about the status or "state" of another program, it is independent and all the data that is needed is given in the current interaction rather than data from previous interactions. Stateful is essentially the opposite of it where previous interaction data does matter for certain processes.
 
 4. Our lecture this week stated that UDP is "unreliable". If that is the case, why would we ever use it?
 
